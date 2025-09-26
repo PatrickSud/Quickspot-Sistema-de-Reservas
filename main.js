@@ -34,6 +34,17 @@ let state = {
         floorDistribution: {},
         upcomingBookings: [],
         favoriteDesks: []
+    },
+    // Dashboard do Administrador
+    adminStats: {
+        totalBookings: 0,
+        activeUsers: 0,
+        occupancyRate: 0,
+        availableDesks: 0,
+        dailyData: [],
+        buildingDistribution: {},
+        topUsers: [],
+        recentBookings: []
     }
 };
 
@@ -351,6 +362,264 @@ const updateFavoriteDesks = (favoriteDesks) => {
     `).join('');
 };
 
+// ===== DASHBOARD DO ADMINISTRADOR =====
+
+// Função para calcular estatísticas administrativas
+const calculateAdminStats = async (allBookings) => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    
+    // Total de reservas
+    const totalBookings = allBookings.length;
+    
+    // Utilizadores únicos
+    const uniqueUsers = new Set(allBookings.map(booking => booking.userDetails?.uid || booking.userId)).size;
+    
+    // Calcular total de mesas disponíveis
+    let totalDesks = 0;
+    Object.values(state.liveBuildingsData).forEach(building => {
+        Object.values(building.floors).forEach(floor => {
+            totalDesks += floor.desks.length;
+        });
+    });
+    
+    // Reservas ativas hoje
+    const todayBookings = allBookings.filter(booking => {
+        const bookingDate = booking.bookingDetails?.date || booking.date;
+        return bookingDate === today;
+    });
+    
+    // Taxa de ocupação (reservas ativas hoje / total de mesas)
+    const occupancyRate = totalDesks > 0 ? Math.round((todayBookings.length / totalDesks) * 100) : 0;
+    
+    // Mesas disponíveis hoje
+    const availableDesks = Math.max(0, totalDesks - todayBookings.length);
+    
+    // Dados diários (últimos 7 dias)
+    const dailyData = [];
+    for (let i = 6; i >= 0; i--) {
+        const date = new Date(now);
+        date.setDate(now.getDate() - i);
+        const dateString = date.toISOString().split('T')[0];
+        
+        const dayBookings = allBookings.filter(booking => {
+            const bookingDate = booking.bookingDetails?.date || booking.date;
+            return bookingDate === dateString;
+        });
+        
+        dailyData.push({
+            date: dateString,
+            day: date.toLocaleDateString('pt-PT', { weekday: 'short' }),
+            count: dayBookings.length
+        });
+    }
+    
+    // Distribuição por edifício
+    const buildingDistribution = {};
+    allBookings.forEach(booking => {
+        const buildingId = booking.locationDetails?.buildingId || booking.buildingId;
+        const buildingName = state.liveBuildingsData[buildingId]?.name || 'Edifício Desconhecido';
+        buildingDistribution[buildingName] = (buildingDistribution[buildingName] || 0) + 1;
+    });
+    
+    // Top utilizadores (mais reservas)
+    const userCounts = {};
+    allBookings.forEach(booking => {
+        const userId = booking.userDetails?.uid || booking.userId;
+        const userEmail = booking.userDetails?.email || booking.userEmail || 'Utilizador Desconhecido';
+        if (userId) {
+            if (!userCounts[userId]) {
+                userCounts[userId] = { email: userEmail, count: 0 };
+            }
+            userCounts[userId].count++;
+        }
+    });
+    
+    const topUsers = Object.entries(userCounts)
+        .sort(([,a], [,b]) => b.count - a.count)
+        .slice(0, 5)
+        .map(([userId, data]) => ({ userId, ...data }));
+    
+    // Reservas recentes (últimas 10)
+    const recentBookings = allBookings
+        .sort((a, b) => {
+            const dateA = new Date(a.bookingDetails?.date || a.date);
+            const dateB = new Date(b.bookingDetails?.date || b.date);
+            return dateB - dateA;
+        })
+        .slice(0, 10);
+    
+    return {
+        totalBookings,
+        activeUsers: uniqueUsers,
+        occupancyRate,
+        availableDesks,
+        dailyData,
+        buildingDistribution,
+        topUsers,
+        recentBookings
+    };
+};
+
+// Função para atualizar o dashboard do administrador
+const updateAdminDashboard = async () => {
+    try {
+        // Buscar todas as reservas
+        const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
+        const snapshot = await getDocs(bookingsRef);
+        const allBookings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        
+        // Calcular estatísticas
+        const stats = await calculateAdminStats(allBookings);
+        state.adminStats = stats;
+        
+        // Atualizar UI
+        ui.totalBookings.textContent = stats.totalBookings;
+        ui.activeUsers.textContent = stats.activeUsers;
+        ui.occupancyRate.textContent = `${stats.occupancyRate}%`;
+        ui.availableDesks.textContent = stats.availableDesks;
+        
+        // Atualizar gráfico diário
+        updateDailyBookingsChart(stats.dailyData);
+        
+        // Atualizar distribuição por edifício
+        updateBuildingDistribution(stats.buildingDistribution);
+        
+        // Atualizar top utilizadores
+        updateTopUsers(stats.topUsers);
+        
+        // Atualizar reservas recentes
+        updateRecentBookings(stats.recentBookings);
+        
+    } catch (error) {
+        console.error('Erro ao atualizar dashboard admin:', error);
+    }
+};
+
+// Função para atualizar gráfico de reservas diárias
+const updateDailyBookingsChart = (dailyData) => {
+    const maxCount = Math.max(...dailyData.map(d => d.count), 1);
+    
+    ui.dailyBookingsChart.innerHTML = `
+        <div class="w-full h-full flex items-end justify-between gap-2">
+            ${dailyData.map(day => {
+                const height = (day.count / maxCount) * 100;
+                return `
+                    <div class="flex flex-col items-center gap-2 flex-1">
+                        <div class="w-full bg-gradient-success rounded-t-lg transition-all duration-500 hover:bg-gradient-primary" 
+                             style="height: ${height}%; min-height: 20px;">
+                        </div>
+                        <div class="text-xs text-gray-400">${day.day}</div>
+                        <div class="text-sm font-semibold text-white">${day.count}</div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+};
+
+// Função para atualizar distribuição por edifício
+const updateBuildingDistribution = (buildingDistribution) => {
+    if (Object.keys(buildingDistribution).length === 0) {
+        ui.buildingDistribution.innerHTML = '<div class="text-gray-400">Nenhuma reserva encontrada</div>';
+        return;
+    }
+    
+    const total = Object.values(buildingDistribution).reduce((sum, count) => sum + count, 0);
+    
+    ui.buildingDistribution.innerHTML = Object.entries(buildingDistribution)
+        .sort(([,a], [,b]) => b - a)
+        .map(([buildingName, count]) => {
+            const percentage = Math.round((count / total) * 100);
+            return `
+                <div class="flex items-center justify-between p-3 glass rounded-lg">
+                    <span class="text-white font-medium">${buildingName}</span>
+                    <div class="flex items-center gap-3">
+                        <div class="w-20 bg-gray-700 rounded-full h-2">
+                            <div class="bg-gradient-warning h-2 rounded-full transition-all duration-500" 
+                                 style="width: ${percentage}%"></div>
+                        </div>
+                        <span class="text-sm text-gray-400 w-8">${count}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+};
+
+// Função para atualizar top utilizadores
+const updateTopUsers = (topUsers) => {
+    if (topUsers.length === 0) {
+        ui.topUsers.innerHTML = '<div class="text-gray-400">Nenhum utilizador encontrado</div>';
+        return;
+    }
+    
+    ui.topUsers.innerHTML = topUsers.map((user, index) => `
+        <div class="p-3 glass rounded-lg flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-primary rounded-full flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">${index + 1}</span>
+                </div>
+                <div>
+                    <p class="font-semibold text-white text-sm">${user.email}</p>
+                    <p class="text-xs text-gray-400">${user.count} reservas</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="w-12 bg-gray-700 rounded-full h-2">
+                    <div class="bg-gradient-primary h-2 rounded-full transition-all duration-500" 
+                         style="width: ${(user.count / topUsers[0].count) * 100}%"></div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+};
+
+// Função para atualizar reservas recentes
+const updateRecentBookings = (recentBookings) => {
+    if (recentBookings.length === 0) {
+        ui.recentBookings.innerHTML = '<div class="text-gray-400">Nenhuma reserva encontrada</div>';
+        return;
+    }
+    
+    ui.recentBookings.innerHTML = recentBookings.map(booking => {
+        const buildingName = state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.name || 'Edifício';
+        const floorName = state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.floors[booking.locationDetails?.floorId || booking.floorId]?.name || 'Andar';
+        const userEmail = booking.userDetails?.email || booking.userEmail || 'Utilizador';
+        const date = booking.bookingDetails?.date || booking.date;
+        const startTime = booking.bookingDetails?.startTime || booking.startTime;
+        const endTime = booking.bookingDetails?.endTime || booking.endTime;
+        
+        return `
+            <div class="p-3 glass rounded-lg">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-semibold text-white text-sm">${booking.locationDetails?.deskId || booking.deskId}</p>
+                        <p class="text-xs text-gray-400">${buildingName} - ${floorName}</p>
+                        <p class="text-xs text-gray-400">${userEmail}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-xs text-white">${date}</p>
+                        <p class="text-xs text-gray-400">${startTime} - ${endTime}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+// Função para alternar entre dashboard e gestor de espaços
+const toggleAdminSpaceManager = (showSpaceManager = false) => {
+    if (showSpaceManager) {
+        ui.adminDashboard.classList.add('hidden');
+        ui.spaceManager.classList.remove('hidden');
+    } else {
+        ui.adminDashboard.classList.remove('hidden');
+        ui.spaceManager.classList.add('hidden');
+        // Atualizar dashboard quando voltar
+        updateAdminDashboard();
+    }
+};
+
 // --- CORE APP LOGIC ---
 const resetState = () => {
     state.selectedDate = ui.dateInput.value;
@@ -631,55 +900,6 @@ const saveLayout = async () => {
     }
 };
 
-const updateAdminDashboard = async () => {
-    // 1. Métricas
-    const today = getTodayDateString();
-    const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
-    const qToday = query(bookingsRef, where('date', '==', today));
-    const todaySnapshot = await getDocs(qToday);
-    const bookingsToday = todaySnapshot.docs.map(doc => doc.data());
-
-    // Taxa de Ocupação
-    const totalDesks = Object.values(state.liveBuildingsData).reduce((total, building) => {
-        return total + Object.values(building.floors).reduce((subTotal, floor) => subTotal + floor.desks.length, 0);
-    }, 0);
-    const occupancyRate = totalDesks > 0 ? (bookingsToday.length / totalDesks) * 100 : 0;
-    ui.admin.occupancyRate.textContent = `${occupancyRate.toFixed(1)}%`;
-    ui.admin.totalBookingsToday.textContent = bookingsToday.length;
-
-    // Lugar Mais Popular (baseado em todas as reservas)
-    const allBookingsSnapshot = await getDocs(bookingsRef);
-    const allBookings = allBookingsSnapshot.docs.map(doc => doc.data());
-    if (allBookings.length > 0) {
-        const buildingCounts = allBookings.reduce((acc, booking) => {
-            acc[booking.buildingId] = (acc[booking.buildingId] || 0) + 1;
-            return acc;
-        }, {});
-        const popularBuildingId = Object.keys(buildingCounts).sort((a, b) => buildingCounts[b] - buildingCounts[a])[0];
-        ui.admin.popularBuilding.textContent = state.liveBuildingsData[popularBuildingId]?.name || 'N/A';
-    } else {
-        ui.admin.popularBuilding.textContent = 'N/A';
-    }
-
-    // 2. Próximas Reservas
-    const qNext = query(bookingsRef, where('date', '>=', today), orderBy('date'), orderBy('startTime'), limit(10));
-    const nextSnapshot = await getDocs(qNext);
-    ui.admin.allBookingsList.innerHTML = '';
-    if (nextSnapshot.empty) {
-        ui.admin.allBookingsList.innerHTML = '<p class="text-center text-gray-500">Nenhuma reserva futura.</p>';
-    } else {
-        nextSnapshot.docs.forEach(doc => {
-            const booking = doc.data();
-            const item = document.createElement('div');
-            item.className = 'p-3 bg-gray-800 rounded-lg';
-            item.innerHTML = `<p class="font-medium text-sm text-white">${booking.user.email} - ${booking.deskId}</p><p class="text-xs text-gray-400">${booking.date} das ${booking.startTime} às ${booking.endTime}</p>`;
-            ui.admin.allBookingsList.appendChild(item);
-        });
-    }
-
-    // 3. Gestor de Estrutura
-    renderLayoutManager();
-};
 
 const toggleAdminView = (isAdmin) => {
     state.isAdminView = isAdmin;
@@ -688,6 +908,9 @@ const toggleAdminView = (isAdmin) => {
         show(ui.admin.adminView);
         ui.admin.appTitle.textContent = 'Dashboard Admin';
         ui.admin.toggleAdminViewBtn.textContent = 'Fazer Reserva';
+        // Mostrar dashboard por padrão
+        ui.adminDashboard.classList.remove('hidden');
+        ui.spaceManager.classList.add('hidden');
         updateAdminDashboard();
     } else {
         hide(ui.admin.adminView);
@@ -1025,6 +1248,73 @@ const setupEventListeners = () => {
             console.error('Erro ao exportar dados:', error);
             alert('Erro ao exportar dados. Tente novamente.');
         }
+    });
+
+    // ===== DASHBOARD DO ADMINISTRADOR - EVENT LISTENERS =====
+    
+    // Botão de gerir espaços
+    ui.manageSpacesBtn.addEventListener('click', () => {
+        toggleAdminSpaceManager(true);
+    });
+    
+    // Botão de ver relatórios
+    ui.viewReportsBtn.addEventListener('click', () => {
+        // TODO: Implementar sistema de relatórios
+        alert('Sistema de relatórios em desenvolvimento');
+    });
+    
+    // Botão de exportar dados administrativos
+    ui.exportAdminDataBtn.addEventListener('click', async () => {
+        try {
+            // Buscar todas as reservas
+            const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
+            const snapshot = await getDocs(bookingsRef);
+            const allBookings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            
+            // Preparar dados para exportação
+            const exportData = allBookings.map(booking => ({
+                'ID': booking.id,
+                'Data': booking.bookingDetails?.date || booking.date,
+                'Hora Início': booking.bookingDetails?.startTime || booking.startTime,
+                'Hora Fim': booking.bookingDetails?.endTime || booking.endTime,
+                'Utilizador': booking.userDetails?.email || booking.userEmail || 'N/A',
+                'Edifício': state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.name || 'N/A',
+                'Andar': state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.floors[booking.locationDetails?.floorId || booking.floorId]?.name || 'N/A',
+                'Mesa': booking.locationDetails?.deskId || booking.deskId,
+                'Status': booking.status || 'Ativa',
+                'Data de Criação': booking.createdAt || 'N/A'
+            }));
+            
+            // Converter para CSV
+            const csvContent = [
+                Object.keys(exportData[0] || {}).join(','),
+                ...exportData.map(row => Object.values(row).join(','))
+            ].join('\n');
+            
+            // Criar e baixar arquivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `relatorio_admin_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Mostrar mensagem de sucesso
+            showSuccessModal('Relatório exportado com sucesso!');
+            
+        } catch (error) {
+            console.error('Erro ao exportar relatório:', error);
+            alert('Erro ao exportar relatório. Tente novamente.');
+        }
+    });
+    
+    // Botão de configurações do sistema
+    ui.systemSettingsBtn.addEventListener('click', () => {
+        // TODO: Implementar configurações do sistema
+        alert('Configurações do sistema em desenvolvimento');
     });
 
     // --- Admin Listeners ---
