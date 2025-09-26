@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Reserva de Espaços de Trabalho</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="p-4 sm:p-8 flex items-center justify-center min-h-screen">
+    <div class="bg-gray-800 rounded-2xl shadow-2xl shadow-blue-500/10 p-6 sm:p-10 w-full max-w-4xl">
+        
+        <div id="auth-section">
+            <h1 class="text-3xl sm:text-4xl font-bold text-center text-white mb-6">Bem-vindo!</h1>
+            <div class="mb-6 space-y-4">
+                <input type="email" id="email-input" placeholder="O seu e-mail" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                <input type="password" id="password-input" placeholder="A sua palavra-passe" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+            </div>
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button id="login-button" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors">Entrar</button>
+                <button id="signup-button" class="w-full bg-indigo-600 text-white font-medium py-3 rounded-xl hover:bg-indigo-700 transition-colors">Cadastrar</button>
+            </div>
+            <div id="config-error-box" class="hidden mt-6 p-4 rounded-xl bg-red-900 border border-red-700 text-red-200">
+                <h4 class="font-bold">Ação Requerida</h4>
+                <p class="text-sm">O método de login por E-mail/Senha está desativado no seu projeto Firebase.</p>
+                <p class="text-sm mt-2">Por favor, aceda à sua <a href="https://console.firebase.google.com/" target="_blank" class="underline hover:text-white">Consola do Firebase</a>, vá para <strong>Authentication &rarr; Sign-in method</strong> e ative o fornecedor <strong>"E-mail/palavra-passe"</strong>.</p>
+            </div>
+            <div id="test-credentials" class="mt-8 p-4 border border-dashed border-gray-600 rounded-xl">
+                <h3 class="text-lg font-semibold text-center text-gray-300 mb-4">Utilizadores de Teste</h3>
+                <p class="text-center text-sm text-gray-400 mb-4"><strong>Para testar:</strong> 1º Preencha os dados, 2º Clique em <strong>Cadastrar</strong>. Depois, pode fazer o login normalmente.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <p class="font-bold text-white">Administrador</p>
+                        <p class="text-sm text-gray-400">E-mail: <code class="bg-gray-900 px-1 rounded">admin@test.com</code></p>
+                        <p class="text-sm text-gray-400">Passe: <code class="bg-gray-900 px-1 rounded">admin123</code></p>
+                        <button id="fill-admin-btn" class="mt-2 w-full text-xs bg-blue-800 text-white py-1 rounded hover:bg-blue-700">Preencher</button>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg">
+                        <p class="font-bold text-white">Utilizador Comum</p>
+                        <p class="text-sm text-gray-400">E-mail: <code class="bg-gray-900 px-1 rounded">user@test.com</code></p>
+                        <p class="text-sm text-gray-400">Passe: <code class="bg-gray-900 px-1 rounded">user123</code></p>
+                        <button id="fill-user-btn" class="mt-2 w-full text-xs bg-indigo-800 text-white py-1 rounded hover:bg-indigo-700">Preencher</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="app-section" class="hidden">
+            <div class="flex justify-between items-center mb-6">
+                 <h1 class="text-3xl sm:text-4xl font-bold text-white">Reservar Espaço</h1>
+                 <div>
+                    <button id="manage-layout-btn" class="hidden bg-yellow-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-yellow-700 transition-colors text-sm mr-2">Gerir</button>
+                    <button id="logout-button" class="bg-red-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-red-700 transition-colors text-sm">Sair</button>
+                 </div>
+            </div>
+            <div id="step-1" class="step-container">
+                 <h2 class="text-2xl font-semibold mb-4 text-gray-100">1. Escolha a Data e o Edifício</h2>
+                <div class="mb-6">
+                    <label for="date-input" class="block text-sm font-medium text-gray-300 mb-2">Data da Reserva:</label>
+                    <input type="date" id="date-input" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                </div>
+                <div class="mb-6">
+                    <label for="building-select" class="block text-sm font-medium text-gray-300 mb-2">Selecione o Edifício:</label>
+                    <select id="building-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <option value="">Selecione um Edifício</option>
+                    </select>
+                </div>
+                <button id="next-to-floor" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors opacity-50 cursor-not-allowed" disabled>Avançar</button>
+            </div>
+            <div id="step-2" class="step-container hidden">
+                 <h2 class="text-2xl font-semibold mb-4 text-gray-100">2. Escolha o Andar e o Horário</h2>
+                <div class="mb-6">
+                    <label for="floor-select" class="block text-sm font-medium text-gray-300 mb-2">Selecione o Andar:</label>
+                    <select id="floor-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                        <option value="">Selecione um Andar</option>
+                    </select>
+                </div>
+                <div class="mb-6 grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="start-time-select" class="block text-sm font-medium text-gray-300 mb-2">Hora de Início:</label>
+                        <select id="start-time-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"></select>
+                    </div>
+                    <div>
+                        <label for="end-time-select" class="block text-sm font-medium text-gray-300 mb-2">Hora de Fim:</label>
+                        <select id="end-time-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"></select>
+                    </div>
+                </div>
+                <button id="next-to-desks" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors opacity-50 cursor-not-allowed" disabled>Ver Mesas Disponíveis</button>
+                <button id="back-to-building" class="w-full mt-2 bg-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-500 transition-colors">Voltar</button>
+            </div>
+            <div id="step-3" class="step-container hidden">
+                 <h2 class="text-2xl font-semibold mb-4 text-gray-100">3. Selecione o Lugar</h2>
+                <div id="desks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
+                <button id="back-to-floor" class="w-full mt-2 bg-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-500 transition-colors">Voltar</button>
+            </div>
+             <div id="booking-details-summary" class="hidden p-5 border border-gray-700 rounded-xl bg-gray-900 mt-6">
+                <h2 class="text-xl font-semibold text-white mb-2">Detalhes da Reserva:</h2>
+                <div class="text-gray-300 space-y-1">
+                    <p>Utilizador: <span id="selected-user"></span></p>
+                    <p>Data: <span id="selected-date-display"></span></p>
+                    <p>Horário: <span id="selected-time-display"></span></p>
+                    <p>Edifício: <span id="selected-building-display"></span></p>
+                    <p>Andar: <span id="selected-floor-display"></span></p>
+                    <p>Mesa: <span id="selected-desk-display"></span></p>
+                </div>
+                <button id="book-button" class="w-full bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700 transition-colors mt-4">Confirmar Reserva</button>
+            </div>
+            <div id="my-bookings-section" class="mt-8">
+                <h2 class="text-2xl font-semibold text-white mb-4">As Minhas Reservas</h2>
+                <div id="my-bookings-list" class="space-y-3">
+                    <p class="text-center text-gray-500">Nenhuma reserva encontrada.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="message-box" class="mt-4 p-4 rounded-xl text-center hidden"></div>
+        <div id="loading-spinner" class="hidden text-center mt-6"><div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-solid rounded-full border-t-transparent"></div><p class="text-gray-400 mt-2">A carregar...</p></div>
+    </div>
+
+    <div id="admin-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl w-full max-w-2xl max-h-full overflow-y-auto">
+            <h2 class="text-2xl font-bold text-white mb-4">Editar Estrutura (JSON)</h2>
+            <p class="text-sm text-gray-400 mb-4">Adicione ou remova edifícios, andares e mesas, editando o texto JSON abaixo. Certifique-se de que o formato JSON é válido antes de guardar.</p>
+            <textarea id="layout-json-editor" class="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-600"></textarea>
+            <div class="mt-4 flex gap-3">
+                <button id="save-layout-btn" class="w-full bg-green-600 text-white font-medium py-2 rounded-xl hover:bg-green-700">Guardar Alterações</button>
+                <button id="cancel-layout-btn" class="w-full bg-gray-600 text-gray-200 font-medium py-2 rounded-xl hover:bg-gray-500">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
