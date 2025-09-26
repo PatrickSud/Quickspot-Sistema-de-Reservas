@@ -684,3 +684,16 @@ body {
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
 }
+
+/* ===== CONTENT BACKGROUND ===== */
+.content-background {
+    background-color: rgba(17, 24, 39, 0.85); /* Fundo escuro e semitransparente unificado */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    
+    /* Estas 3 linhas corrigem o problema de altura/alinhamento */
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
