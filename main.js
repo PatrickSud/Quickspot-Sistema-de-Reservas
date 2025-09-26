@@ -98,6 +98,90 @@ const updateMyBookingsUI = (bookings) => {
 };
 
 // --- ADMIN DASHBOARD ---
+
+// Objeto para guardar o estado temporário do modal
+let modalState = {
+    onSave: null,
+};
+
+// Função para mostrar e configurar o modal
+const showModal = (title, contentHtml, onSaveCallback) => {
+    ui.admin.modal.title.textContent = title;
+    ui.admin.modal.content.innerHTML = contentHtml;
+    modalState.onSave = onSaveCallback;
+    show(ui.admin.modal.container);
+};
+
+// Função para esconder o modal
+const hideModal = () => {
+    hide(ui.admin.modal.container);
+    modalState.onSave = null;
+    ui.admin.modal.content.innerHTML = '';
+};
+
+// Substitua a sua função renderLayoutManager por esta versão
+const renderLayoutManager = () => {
+    const manager = ui.admin.layoutManager;
+    manager.innerHTML = ''; 
+
+    if (Object.keys(state.liveBuildingsData).length === 0) {
+        manager.innerHTML = '<p class="text-center text-gray-500">Nenhum edifício criado.</p>';
+        return;
+    }
+
+    for (const buildingId in state.liveBuildingsData) {
+        const building = state.liveBuildingsData[buildingId];
+        const buildingEl = document.createElement('div');
+        buildingEl.className = 'bg-gray-800 p-4 rounded-lg';
+        buildingEl.innerHTML = `
+            <div class="flex justify-between items-center mb-3">
+                <h4 class="text-lg font-bold text-white"><span class="editable cursor-pointer hover:text-blue-400" data-type="building" data-id="${buildingId}">${building.name}</span></h4>
+                <button class="remove-btn text-red-400 hover:text-red-300 text-sm font-bold" data-type="building" data-id="${buildingId}">Remover</button>
+            </div>
+            <div class="pl-4 border-l-2 border-gray-700 space-y-2" id="floors-container-${buildingId}"></div>
+            <button class="add-btn mt-3 text-sm bg-blue-800 text-white py-1 px-3 rounded hover:bg-blue-700" data-type="floor" data-parent-id="${buildingId}">Adicionar Andar</button>
+        `;
+
+        const floorsContainer = buildingEl.querySelector(`#floors-container-${buildingId}`);
+        for (const floorId in building.floors) {
+            const floor = building.floors[floorId];
+            const floorEl = document.createElement('div');
+            floorEl.className = 'bg-gray-700 p-3 rounded-md';
+            floorEl.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-semibold text-gray-200"><span class="editable cursor-pointer hover:text-blue-400" data-type="floor" data-id="${floorId}" data-parent-id="${buildingId}">${floor.name}</span></p>
+                    <button class="remove-btn text-red-500 hover:text-red-400 text-xs font-bold" data-type="floor" data-id="${floorId}" data-parent-id="${buildingId}">Remover</button>
+                </div>
+                <div class="flex flex-wrap gap-2" id="desks-container-${floorId}"></div>
+                <button class="add-btn mt-2 text-xs bg-indigo-800 text-white py-1 px-2 rounded hover:bg-indigo-700" data-type="desk" data-parent-id="${floorId}" data-grandparent-id="${buildingId}">Adicionar Mesas</button>
+            `;
+
+            const desksContainer = floorEl.querySelector(`#desks-container-${floorId}`);
+            floor.desks.forEach(deskId => {
+                desksContainer.innerHTML += `
+                    <div class="bg-gray-600 px-2 py-1 rounded-full text-xs flex items-center gap-2">
+                        <span>${deskId}</span>
+                        <button class="remove-btn text-gray-300 hover:text-white" data-type="desk" data-id="${deskId}" data-parent-id="${floorId}" data-grandparent-id="${buildingId}">&times;</button>
+                    </div>`;
+            });
+            floorsContainer.appendChild(floorEl);
+        }
+        manager.appendChild(buildingEl);
+    }
+};
+
+const saveLayout = async () => {
+    try {
+        await setDoc(doc(db, `/artifacts/${appId}/public/data/layout/main`), { 
+            structure: JSON.stringify(state.liveBuildingsData) 
+        });
+        displayMessage("Estrutura guardada com sucesso!");
+    } catch (error) {
+        console.error("Erro ao guardar a estrutura:", error);
+        displayMessage("Ocorreu um erro ao guardar a estrutura.", "error");
+    }
+};
+
 const updateAdminDashboard = async () => {
     // 1. Métricas
     const today = getTodayDateString();
@@ -146,64 +230,6 @@ const updateAdminDashboard = async () => {
 
     // 3. Gestor de Estrutura
     renderLayoutManager();
-};
-
-const renderLayoutManager = () => {
-    const manager = ui.admin.layoutManager;
-    manager.innerHTML = ''; // Limpa a vista para renderizar de novo
-
-    if (Object.keys(state.liveBuildingsData).length === 0) {
-        manager.innerHTML = '<p class="text-center text-gray-500">Nenhum edifício criado. Adicione o primeiro!</p>';
-    }
-
-    // Itera sobre os edifícios
-    for (const buildingId in state.liveBuildingsData) {
-        const building = state.liveBuildingsData[buildingId];
-        const buildingEl = document.createElement('div');
-        buildingEl.className = 'bg-gray-800 p-4 rounded-lg';
-        buildingEl.innerHTML = `
-            <div class="flex justify-between items-center mb-3">
-                <h4 class="text-lg font-bold text-white">${building.name}</h4>
-                <button class="remove-building-btn text-red-400 hover:text-red-300 text-sm font-bold" data-building-id="${buildingId}">Remover</button>
-            </div>
-            <div class="pl-4 border-l-2 border-gray-700 space-y-2" data-floors-container-for="${buildingId}">
-                </div>
-            <button class="add-floor-btn mt-3 text-sm bg-blue-800 text-white py-1 px-3 rounded hover:bg-blue-700" data-building-id="${buildingId}">Adicionar Andar</button>
-        `;
-
-        const floorsContainer = buildingEl.querySelector(`[data-floors-container-for="${buildingId}"]`);
-
-        // Itera sobre os andares do edifício
-        for (const floorId in building.floors) {
-            const floor = building.floors[floorId];
-            const floorEl = document.createElement('div');
-            floorEl.className = 'bg-gray-700 p-3 rounded-md';
-            floorEl.innerHTML = `
-                <div class="flex justify-between items-center mb-2">
-                    <p class="font-semibold text-gray-200">${floor.name}</p>
-                    <button class="remove-floor-btn text-red-500 hover:text-red-400 text-xs font-bold" data-building-id="${buildingId}" data-floor-id="${floorId}">Remover</button>
-                </div>
-                <div class="flex flex-wrap gap-2" data-desks-container-for="${floorId}">
-                    </div>
-                <button class="add-desk-btn mt-2 text-xs bg-indigo-800 text-white py-1 px-2 rounded hover:bg-indigo-700" data-building-id="${buildingId}" data-floor-id="${floorId}">Adicionar Mesa</button>
-            `;
-
-            const desksContainer = floorEl.querySelector(`[data-desks-container-for="${floorId}"]`);
-            
-            // Itera sobre as mesas do andar
-            floor.desks.forEach(deskId => {
-                const deskEl = document.createElement('div');
-                deskEl.className = 'bg-gray-600 px-2 py-1 rounded-full text-xs flex items-center gap-2';
-                deskEl.innerHTML = `
-                    <span>${deskId}</span>
-                    <button class="remove-desk-btn text-gray-300 hover:text-white" data-building-id="${buildingId}" data-floor-id="${floorId}" data-desk-id="${deskId}">&times;</button>
-                `;
-                desksContainer.appendChild(deskEl);
-            });
-            floorsContainer.appendChild(floorEl);
-        }
-        manager.appendChild(buildingEl);
-    }
 };
 
 const toggleAdminView = (isAdmin) => {
@@ -268,18 +294,6 @@ const cancelBooking = async (bookingId) => {
     }
 };
 
-const saveLayout = async () => {
-    try {
-        // Usa o estado atual do objeto `liveBuildingsData` para guardar
-        await setDoc(doc(db, `/artifacts/${appId}/public/data/layout/main`), { 
-            structure: JSON.stringify(state.liveBuildingsData) 
-        });
-        displayMessage("Estrutura guardada com sucesso!");
-    } catch (error) {
-        console.error("Erro ao guardar a estrutura:", error);
-        displayMessage("Ocorreu um erro ao guardar a estrutura.", "error");
-    }
-};
 
 // --- APP INITIALIZATION & FLOW ---
 const initializeAppUI = () => {
@@ -427,79 +441,101 @@ const setupEventListeners = () => {
     });
 
     // --- Admin Listeners ---
-    ui.admin.toggleAdminViewBtn.addEventListener('click', () => {
-        toggleAdminView(!state.isAdminView);
-    });
-
-    // Botão para guardar a estrutura
+    ui.admin.toggleAdminViewBtn.addEventListener('click', () => toggleAdminView(!state.isAdminView));
     ui.admin.saveBtn.addEventListener('click', saveLayout);
+    
+    // Modal controls
+    ui.admin.modal.cancelBtn.addEventListener('click', hideModal);
+    ui.admin.modal.saveBtn.addEventListener('click', () => {
+        if (modalState.onSave) {
+            modalState.onSave();
+        }
+    });
 
     // Botão principal para adicionar um novo edifício
     ui.admin.addBuildingBtn.addEventListener('click', () => {
-        const buildingName = prompt("Qual é o nome do novo edifício?");
-        if (buildingName) {
-            // Cria um ID simples (pode ser melhorado com um gerador de UUIDs)
-            const buildingId = `building-${Date.now()}`;
-            state.liveBuildingsData[buildingId] = {
-                name: buildingName,
-                floors: {}
-            };
-            renderLayoutManager(); // Re-renderiza a UI com o novo edifício
-        }
+        const content = `<input type="text" id="modal-input-name" placeholder="Ex: Edifício Principal" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">`;
+        showModal('Adicionar Novo Edifício', content, () => {
+            const name = document.getElementById('modal-input-name').value;
+            if (name) {
+                const id = `building-${Date.now()}`;
+                state.liveBuildingsData[id] = { name, floors: {} };
+                renderLayoutManager();
+                hideModal();
+            }
+        });
     });
 
-    // Listener delegado para os botões dentro do gestor
+    // Listener delegado para todas as ações dentro do gestor
     ui.admin.layoutManager.addEventListener('click', (e) => {
         const target = e.target;
-        const { buildingId, floorId, deskId } = target.dataset;
+        const { type, id, parentId, grandparentId } = target.dataset;
 
-        // Adicionar Andar
-        if (target.classList.contains('add-floor-btn')) {
-            const floorName = prompt(`Qual o nome do novo andar para o edifício "${state.liveBuildingsData[buildingId].name}"?`);
-            if (floorName) {
-                const floorId = `floor-${Date.now()}`;
-                state.liveBuildingsData[buildingId].floors[floorId] = {
-                    name: floorName,
-                    desks: []
-                };
-                renderLayoutManager();
+        // Ações de Adicionar
+        if (target.classList.contains('add-btn')) {
+            if (type === 'floor') {
+                const content = `<input type="text" id="modal-input-name" placeholder="Ex: Andar 1 (TI)" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">`;
+                showModal(`Novo Andar para "${state.liveBuildingsData[parentId].name}"`, content, () => {
+                    const name = document.getElementById('modal-input-name').value;
+                    if (name) {
+                        const floorId = `floor-${Date.now()}`;
+                        state.liveBuildingsData[parentId].floors[floorId] = { name, desks: [] };
+                        renderLayoutManager();
+                        hideModal();
+                    }
+                });
+            }
+            if (type === 'desk') {
+                const content = `
+                    <input type="text" id="modal-input-prefix" placeholder="Prefixo (Ex: Mesa, Posto)" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
+                    <input type="number" id="modal-input-quantity" placeholder="Quantidade" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
+                    <input type="number" id="modal-input-start" placeholder="Número Inicial" value="1" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
+                `;
+                showModal('Adicionar Mesas em Massa', content, () => {
+                    const prefix = document.getElementById('modal-input-prefix').value;
+                    const quantity = parseInt(document.getElementById('modal-input-quantity').value);
+                    const startNum = parseInt(document.getElementById('modal-input-start').value);
+                    if (prefix && quantity > 0) {
+                        for (let i = 0; i < quantity; i++) {
+                            const deskId = `${prefix} ${startNum + i}`;
+                            state.liveBuildingsData[grandparentId].floors[parentId].desks.push(deskId);
+                        }
+                        renderLayoutManager();
+                        hideModal();
+                    }
+                });
             }
         }
 
-        // Adicionar Mesa
-        if (target.classList.contains('add-desk-btn')) {
-            const newDeskId = prompt(`Qual o nome/código da nova mesa? (ex: A1-05)`);
-            if (newDeskId) {
-                state.liveBuildingsData[buildingId].floors[floorId].desks.push(newDeskId);
-                renderLayoutManager();
+        // Ações de Remover
+        if (target.classList.contains('remove-btn')) {
+            if (type === 'building' && confirm(`Remover "${state.liveBuildingsData[id].name}"?`)) {
+                delete state.liveBuildingsData[id];
             }
-        }
-        
-        // Remover Edifício
-        if (target.classList.contains('remove-building-btn')) {
-            if (confirm(`Tem a certeza que quer remover o edifício "${state.liveBuildingsData[buildingId].name}" e todos os seus andares e mesas?`)) {
-                delete state.liveBuildingsData[buildingId];
-                renderLayoutManager();
+            if (type === 'floor' && confirm(`Remover "${state.liveBuildingsData[parentId].floors[id].name}"?`)) {
+                delete state.liveBuildingsData[parentId].floors[id];
             }
-        }
-        
-        // Remover Andar
-        if (target.classList.contains('remove-floor-btn')) {
-            if (confirm(`Tem a certeza que quer remover o andar "${state.liveBuildingsData[buildingId].floors[floorId].name}"?`)) {
-                delete state.liveBuildingsData[buildingId].floors[floorId];
-                renderLayoutManager();
-            }
-        }
-        
-        // Remover Mesa
-        if (target.classList.contains('remove-desk-btn')) {
-            // Não precisa de confirmação para algo tão pequeno, mas pode adicionar se quiser
-            const desks = state.liveBuildingsData[buildingId].floors[floorId].desks;
-            const deskIndex = desks.indexOf(deskId);
-            if (deskIndex > -1) {
-                desks.splice(deskIndex, 1);
+            if (type === 'desk') {
+                const desks = state.liveBuildingsData[grandparentId].floors[parentId].desks;
+                const index = desks.indexOf(id);
+                if (index > -1) desks.splice(index, 1);
             }
             renderLayoutManager();
+        }
+
+        // Ações de Renomear (Editar)
+        if (target.classList.contains('editable')) {
+            const currentName = target.textContent;
+            const content = `<input type="text" id="modal-input-name" value="${currentName}" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">`;
+            showModal(`Renomear "${currentName}"`, content, () => {
+                const newName = document.getElementById('modal-input-name').value;
+                if (newName && newName !== currentName) {
+                    if (type === 'building') state.liveBuildingsData[id].name = newName;
+                    if (type === 'floor') state.liveBuildingsData[parentId].floors[id].name = newName;
+                    renderLayoutManager();
+                }
+                hideModal();
+            });
         }
     });
 };
