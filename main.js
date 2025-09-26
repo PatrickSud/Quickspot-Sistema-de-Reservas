@@ -1375,7 +1375,7 @@ const updateMyBookingsUI = (bookings) => {
             
             const item = document.createElement('div');
             item.className = 'my-booking-item flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 card-modern rounded-xl';
-            item.innerHTML = `<div><p class="font-medium text-white">${deskId} (${buildingName}, ${floorName})</p><p class="text-sm text-gray-300">${date} das ${startTime} às ${endTime}</p></div><button class="cancel-button mt-2 sm:mt-0 bg-gradient-error text-white px-3 py-1 rounded-full text-sm font-medium hover:shadow-lg btn-modern" data-booking-id="${booking.id}">Cancelar</button>`;
+            item.innerHTML = `<div><p class="font-medium text-white">${booking.deskId} (${buildingName}, ${floorName})</p><p class="text-sm text-gray-300">${booking.date} das ${booking.startTime} às ${booking.endTime}</p></div><button class="cancel-button mt-2 sm:mt-0 bg-gradient-warning text-white px-3 py-1 rounded-xl text-sm font-medium hover:shadow-lg btn-modern" data-booking-id="${booking.id}">Cancelar</button>`;
             ui.myBookingsList.appendChild(item);
         });
         document.querySelectorAll('.cancel-button').forEach(button => button.addEventListener('click', e => cancelBooking(e.target.dataset.bookingId)));
