@@ -149,19 +149,61 @@ const updateAdminDashboard = async () => {
 };
 
 const renderLayoutManager = () => {
-    ui.admin.layoutManager.innerHTML = '';
+    const manager = ui.admin.layoutManager;
+    manager.innerHTML = ''; // Limpa a vista para renderizar de novo
+
+    if (Object.keys(state.liveBuildingsData).length === 0) {
+        manager.innerHTML = '<p class="text-center text-gray-500">Nenhum edifício criado. Adicione o primeiro!</p>';
+    }
+
+    // Itera sobre os edifícios
     for (const buildingId in state.liveBuildingsData) {
         const building = state.liveBuildingsData[buildingId];
         const buildingEl = document.createElement('div');
-        buildingEl.className = 'p-4 bg-gray-800 rounded-lg mb-4';
-        buildingEl.innerHTML = `<h4 class="text-lg font-bold text-white">${building.name}</h4>`;
-        // Adicionar andares e mesas
-        // (Interface de gestão mais complexa pode ser adicionada aqui)
-        ui.admin.layoutManager.appendChild(buildingEl);
+        buildingEl.className = 'bg-gray-800 p-4 rounded-lg';
+        buildingEl.innerHTML = `
+            <div class="flex justify-between items-center mb-3">
+                <h4 class="text-lg font-bold text-white">${building.name}</h4>
+                <button class="remove-building-btn text-red-400 hover:text-red-300 text-sm font-bold" data-building-id="${buildingId}">Remover</button>
+            </div>
+            <div class="pl-4 border-l-2 border-gray-700 space-y-2" data-floors-container-for="${buildingId}">
+                </div>
+            <button class="add-floor-btn mt-3 text-sm bg-blue-800 text-white py-1 px-3 rounded hover:bg-blue-700" data-building-id="${buildingId}">Adicionar Andar</button>
+        `;
+
+        const floorsContainer = buildingEl.querySelector(`[data-floors-container-for="${buildingId}"]`);
+
+        // Itera sobre os andares do edifício
+        for (const floorId in building.floors) {
+            const floor = building.floors[floorId];
+            const floorEl = document.createElement('div');
+            floorEl.className = 'bg-gray-700 p-3 rounded-md';
+            floorEl.innerHTML = `
+                <div class="flex justify-between items-center mb-2">
+                    <p class="font-semibold text-gray-200">${floor.name}</p>
+                    <button class="remove-floor-btn text-red-500 hover:text-red-400 text-xs font-bold" data-building-id="${buildingId}" data-floor-id="${floorId}">Remover</button>
+                </div>
+                <div class="flex flex-wrap gap-2" data-desks-container-for="${floorId}">
+                    </div>
+                <button class="add-desk-btn mt-2 text-xs bg-indigo-800 text-white py-1 px-2 rounded hover:bg-indigo-700" data-building-id="${buildingId}" data-floor-id="${floorId}">Adicionar Mesa</button>
+            `;
+
+            const desksContainer = floorEl.querySelector(`[data-desks-container-for="${floorId}"]`);
+            
+            // Itera sobre as mesas do andar
+            floor.desks.forEach(deskId => {
+                const deskEl = document.createElement('div');
+                deskEl.className = 'bg-gray-600 px-2 py-1 rounded-full text-xs flex items-center gap-2';
+                deskEl.innerHTML = `
+                    <span>${deskId}</span>
+                    <button class="remove-desk-btn text-gray-300 hover:text-white" data-building-id="${buildingId}" data-floor-id="${floorId}" data-desk-id="${deskId}">&times;</button>
+                `;
+                desksContainer.appendChild(deskEl);
+            });
+            floorsContainer.appendChild(floorEl);
+        }
+        manager.appendChild(buildingEl);
     }
-    // Nota: A gestão completa (add/remove) é complexa e excede um snippet simples.
-    // Por agora, substituímos o JSON por uma visualização. A edição ainda é recomendada via `saveLayout` com JSON.
-    ui.admin.layoutManager.innerHTML += `<p class="text-center text-sm text-gray-400 mt-4">A gestão visual completa será implementada numa futura versão. Por agora, pode continuar a editar a estrutura via JSON no modal.</p>`;
 };
 
 const toggleAdminView = (isAdmin) => {
@@ -228,15 +270,14 @@ const cancelBooking = async (bookingId) => {
 
 const saveLayout = async () => {
     try {
-        const newLayoutStr = ui.admin.editor.value;
-        const newLayout = JSON.parse(newLayoutStr); // Validate JSON
-        await setDoc(doc(db, `/artifacts/${appId}/public/data/layout/main`), { structure: newLayoutStr });
-        state.liveBuildingsData = newLayout;
-        initializeAppUI();
-        hide(ui.admin.modal);
+        // Usa o estado atual do objeto `liveBuildingsData` para guardar
+        await setDoc(doc(db, `/artifacts/${appId}/public/data/layout/main`), { 
+            structure: JSON.stringify(state.liveBuildingsData) 
+        });
         displayMessage("Estrutura guardada com sucesso!");
     } catch (error) {
-        displayMessage("Erro: JSON inválido. Verifique o texto e tente novamente.", "error");
+        console.error("Erro ao guardar a estrutura:", error);
+        displayMessage("Ocorreu um erro ao guardar a estrutura.", "error");
     }
 };
 
@@ -385,14 +426,82 @@ const setupEventListeners = () => {
         }
     });
 
-    // Admin
+    // --- Admin Listeners ---
     ui.admin.toggleAdminViewBtn.addEventListener('click', () => {
         toggleAdminView(!state.isAdminView);
     });
-    // O modal antigo pode ser removido ou mantido como fallback
-    // ui.admin.manageBtn.addEventListener('click', () => { ui.admin.editor.value = JSON.stringify(state.liveBuildingsData, null, 2); show(ui.admin.modal); });
-    // ui.admin.cancelBtn.addEventListener('click', () => hide(ui.admin.modal));
-    // ui.admin.saveBtn.addEventListener('click', saveLayout);
+
+    // Botão para guardar a estrutura
+    ui.admin.saveBtn.addEventListener('click', saveLayout);
+
+    // Botão principal para adicionar um novo edifício
+    ui.admin.addBuildingBtn.addEventListener('click', () => {
+        const buildingName = prompt("Qual é o nome do novo edifício?");
+        if (buildingName) {
+            // Cria um ID simples (pode ser melhorado com um gerador de UUIDs)
+            const buildingId = `building-${Date.now()}`;
+            state.liveBuildingsData[buildingId] = {
+                name: buildingName,
+                floors: {}
+            };
+            renderLayoutManager(); // Re-renderiza a UI com o novo edifício
+        }
+    });
+
+    // Listener delegado para os botões dentro do gestor
+    ui.admin.layoutManager.addEventListener('click', (e) => {
+        const target = e.target;
+        const { buildingId, floorId, deskId } = target.dataset;
+
+        // Adicionar Andar
+        if (target.classList.contains('add-floor-btn')) {
+            const floorName = prompt(`Qual o nome do novo andar para o edifício "${state.liveBuildingsData[buildingId].name}"?`);
+            if (floorName) {
+                const floorId = `floor-${Date.now()}`;
+                state.liveBuildingsData[buildingId].floors[floorId] = {
+                    name: floorName,
+                    desks: []
+                };
+                renderLayoutManager();
+            }
+        }
+
+        // Adicionar Mesa
+        if (target.classList.contains('add-desk-btn')) {
+            const newDeskId = prompt(`Qual o nome/código da nova mesa? (ex: A1-05)`);
+            if (newDeskId) {
+                state.liveBuildingsData[buildingId].floors[floorId].desks.push(newDeskId);
+                renderLayoutManager();
+            }
+        }
+        
+        // Remover Edifício
+        if (target.classList.contains('remove-building-btn')) {
+            if (confirm(`Tem a certeza que quer remover o edifício "${state.liveBuildingsData[buildingId].name}" e todos os seus andares e mesas?`)) {
+                delete state.liveBuildingsData[buildingId];
+                renderLayoutManager();
+            }
+        }
+        
+        // Remover Andar
+        if (target.classList.contains('remove-floor-btn')) {
+            if (confirm(`Tem a certeza que quer remover o andar "${state.liveBuildingsData[buildingId].floors[floorId].name}"?`)) {
+                delete state.liveBuildingsData[buildingId].floors[floorId];
+                renderLayoutManager();
+            }
+        }
+        
+        // Remover Mesa
+        if (target.classList.contains('remove-desk-btn')) {
+            // Não precisa de confirmação para algo tão pequeno, mas pode adicionar se quiser
+            const desks = state.liveBuildingsData[buildingId].floors[floorId].desks;
+            const deskIndex = desks.indexOf(deskId);
+            if (deskIndex > -1) {
+                desks.splice(deskIndex, 1);
+            }
+            renderLayoutManager();
+        }
+    });
 };
 
 // --- AUTH STATE CHANGE HANDLER ---

@@ -132,11 +132,14 @@
 
                 <div>
                     <h3 class="text-xl font-semibold text-white mb-4">Gerir Estrutura</h3>
-                    <div id="layout-manager" class="bg-gray-700 p-5 rounded-xl"></div>
-                    <button id="save-layout-btn" class="w-full mt-4 bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700">Guardar Alterações na Estrutura</button>
+                    <div id="layout-manager" class="bg-gray-900 p-5 rounded-xl space-y-4">
+                        </div>
+                    <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                         <button id="add-building-btn" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700">Adicionar Novo Edifício</button>
+                         <button id="save-layout-btn" class="w-full bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700">Guardar Alterações na Estrutura</button>
+                    </div>
                 </div>
             </div>
-        </div>
         
         <div id="message-box" class="mt-4 p-4 rounded-xl text-center hidden"></div>
         <div id="loading-spinner" class="hidden text-center mt-6"><div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-solid rounded-full border-t-transparent"></div><p class="text-gray-400 mt-2">A carregar...</p></div>

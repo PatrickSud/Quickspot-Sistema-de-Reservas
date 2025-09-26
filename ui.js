@@ -35,6 +35,7 @@ export const ui = {
         modal: document.getElementById('admin-modal'),
         editor: document.getElementById('layout-json-editor'),
         saveBtn: document.getElementById('save-layout-btn'),
+        addBuildingBtn: document.getElementById('add-building-btn'),
         cancelBtn: document.getElementById('cancel-layout-btn'),
         toggleAdminViewBtn: document.getElementById('toggle-admin-view-btn'),
         adminView: document.getElementById('admin-view'),
