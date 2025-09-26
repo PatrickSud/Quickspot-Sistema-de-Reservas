@@ -1352,13 +1352,28 @@ const updateMyBookingsUI = (bookings) => {
     if (bookings.length === 0) {
         ui.myBookingsList.innerHTML = '<p class="text-center text-gray-500">Não tem reservas ativas.</p>';
     } else {
-        bookings.sort((a,b) => new Date(`${a.date} ${a.startTime}`) - new Date(`${b.date} ${b.startTime}`));
+        bookings.sort((a,b) => {
+            const dateA = a.bookingDetails?.date || a.date;
+            const timeA = a.bookingDetails?.startTime || a.startTime;
+            const dateB = b.bookingDetails?.date || b.date;
+            const timeB = b.bookingDetails?.startTime || b.startTime;
+            return new Date(`${dateA} ${timeA}`) - new Date(`${dateB} ${timeB}`);
+        });
         bookings.forEach(booking => {
-            const buildingName = state.liveBuildingsData[booking.buildingId]?.name || 'Edifício Removido';
-            const floorName = state.liveBuildingsData[booking.buildingId]?.floors[booking.floorId]?.name || 'Andar Removido';
+            // Usar a estrutura correta dos dados
+            const buildingId = booking.locationDetails?.buildingId || booking.buildingId;
+            const floorId = booking.locationDetails?.floorId || booking.floorId;
+            const deskId = booking.locationDetails?.deskId || booking.deskId;
+            const date = booking.bookingDetails?.date || booking.date;
+            const startTime = booking.bookingDetails?.startTime || booking.startTime;
+            const endTime = booking.bookingDetails?.endTime || booking.endTime;
+            
+            const buildingName = state.liveBuildingsData[buildingId]?.name || 'Edifício Removido';
+            const floorName = state.liveBuildingsData[buildingId]?.floors[floorId]?.name || 'Andar Removido';
+            
             const item = document.createElement('div');
             item.className = 'my-booking-item flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 card-modern rounded-xl';
-            item.innerHTML = `<div><p class="font-medium text-white">${booking.deskId} (${buildingName}, ${floorName})</p><p class="text-sm text-gray-300">${booking.date} das ${booking.startTime} às ${booking.endTime}</p></div><button class="cancel-button mt-2 sm:mt-0 bg-gradient-error text-white px-3 py-1 rounded-full text-sm font-medium hover:shadow-lg btn-modern" data-booking-id="${booking.id}">Cancelar</button>`;
+            item.innerHTML = `<div><p class="font-medium text-white">${deskId} (${buildingName}, ${floorName})</p><p class="text-sm text-gray-300">${date} das ${startTime} às ${endTime}</p></div><button class="cancel-button mt-2 sm:mt-0 bg-gradient-error text-white px-3 py-1 rounded-full text-sm font-medium hover:shadow-lg btn-modern" data-booking-id="${booking.id}">Cancelar</button>`;
             ui.myBookingsList.appendChild(item);
         });
         document.querySelectorAll('.cancel-button').forEach(button => button.addEventListener('click', e => cancelBooking(e.target.dataset.bookingId)));
@@ -1638,6 +1653,30 @@ const setupEventListeners = () => {
     ui.nextToDesksBtn.addEventListener('click', () => { state.selectedDeskId = ''; updateBookingDetails(); listenForBookings(); goToStep(3); });
     ui.backToBuildingBtn.addEventListener('click', () => goToStep(1));
     ui.backToFloorBtn.addEventListener('click', () => goToStep(2));
+    
+    // ===== BOTÕES DE NAVEGAÇÃO - EVENT LISTENERS =====
+    
+    // Voltar para seleção de mesas
+    ui.backToDesks.addEventListener('click', () => {
+        document.getElementById('booking-details-summary').classList.add('hidden');
+        goToStep(3);
+    });
+    
+    // Voltar para nova reserva (do dashboard)
+    ui.backToBooking.addEventListener('click', () => {
+        goToStep(1);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    
+    // Voltar para vista de utilizador (do admin)
+    ui.backToUserView.addEventListener('click', () => {
+        toggleAdminView(false);
+    });
+    
+    // Voltar para dashboard admin (do gestor de espaços)
+    ui.backToAdminDashboard.addEventListener('click', () => {
+        toggleAdminSpaceManager(false);
+    });
     
     ui.bookButton.addEventListener('click', async () => {
         if (!state.selectedDate || !state.selectedBuildingId || !state.selectedFloorId || !state.selectedStartTime || !state.selectedEndTime || !state.selectedDeskId) {

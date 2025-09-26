@@ -100,6 +100,11 @@ export const ui = {
     sectionTrends: document.getElementById('section-trends'),
     generateCustomReport: document.getElementById('generate-custom-report'),
     cancelCustomReport: document.getElementById('cancel-custom-report'),
+    // Botões de Navegação
+    backToDesks: document.getElementById('back-to-desks'),
+    backToBooking: document.getElementById('back-to-booking'),
+    backToUserView: document.getElementById('back-to-user-view'),
+    backToAdminDashboard: document.getElementById('back-to-admin-dashboard'),
     // Dashboard do Administrador
     adminDashboard: document.getElementById('admin-dashboard'),
     spaceManager: document.getElementById('space-manager'),

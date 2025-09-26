@@ -204,17 +204,33 @@
                         </div>
                     </div>
                     
-                    <button id="book-button" class="w-full bg-gradient-success text-white font-medium py-3 rounded-xl hover:shadow-lg transition-all mt-4 flex items-center justify-center gap-2 btn-modern">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
-                        Confirmar Reserva
-                    </button>
+                    <div class="flex gap-3 mt-4">
+                        <button id="back-to-desks" class="w-full glass text-gray-200 font-medium py-3 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                            </svg>
+                            Voltar
+                        </button>
+                        <button id="book-button" class="w-full bg-gradient-success text-white font-medium py-3 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                            Confirmar Reserva
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Dashboard do Utilizador -->
                 <div id="user-dashboard" class="mt-8">
-                    <h2 class="text-2xl font-semibold text-gradient mb-6 animate-slide-in-left">Dashboard Pessoal</h2>
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-semibold text-gradient animate-slide-in-left">Dashboard Pessoal</h2>
+                        <button id="back-to-booking" class="glass text-gray-200 font-medium py-2 px-4 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 btn-modern">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                            </svg>
+                            Nova Reserva
+                        </button>
+                    </div>
                     
                     <!-- Estatísticas Pessoais -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -373,7 +389,15 @@
             <div id="admin-view" class="hidden">
                 <!-- Dashboard do Administrador -->
                 <div id="admin-dashboard">
-                    <h2 class="text-2xl font-semibold text-gradient mb-6 animate-slide-in-left">Dashboard Administrativo</h2>
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-semibold text-gradient animate-slide-in-left">Dashboard Administrativo</h2>
+                        <button id="back-to-user-view" class="glass text-gray-200 font-medium py-2 px-4 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 btn-modern">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                            </svg>
+                            Vista Utilizador
+                        </button>
+                    </div>
                     
                     <!-- Estatísticas Gerais -->
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -528,7 +552,15 @@
                 <!-- Gestor Visual de Espaços (Oculto por padrão) -->
                 <div id="space-manager" class="hidden">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold text-white">Gestor Visual de Espaços</h3>
+                        <div class="flex items-center gap-4">
+                            <button id="back-to-admin-dashboard" class="glass text-gray-200 font-medium py-2 px-4 rounded-xl hover:shadow-lg transition-all flex items-center gap-2 btn-modern">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                                </svg>
+                                Voltar
+                            </button>
+                            <h3 class="text-xl font-semibold text-white">Gestor Visual de Espaços</h3>
+                        </div>
                         <button id="add-building-btn" class="bg-gradient-primary text-white font-medium py-2 px-4 rounded-xl hover:shadow-lg text-sm flex items-center gap-2 btn-modern">
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
