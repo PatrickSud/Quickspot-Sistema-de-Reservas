@@ -329,7 +329,7 @@
                             </svg>
                             Ações Rápidas
                         </h3>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <button id="quick-book-btn" class="bg-gradient-primary text-white font-medium py-3 px-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
@@ -347,6 +347,18 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                                 </svg>
                                 Exportar Dados
+                            </button>
+                            <button id="notification-settings-btn" class="glass text-white font-medium py-3 px-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4.828 7l2.586 2.586a2 2 0 002.828 0L12 7H4.828zM4.828 17H12l-1.758-1.758a2 2 0 00-2.828 0L4.828 17z"></path>
+                                </svg>
+                                Notificações
+                            </button>
+                            <button id="notification-history-btn" class="glass text-white font-medium py-3 px-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Histórico
                             </button>
                         </div>
                     </div>
@@ -569,6 +581,68 @@
                 </div>
                 <h3 class="text-xl font-bold text-white mb-2">Sucesso!</h3>
                 <p id="success-message" class="text-gray-300">Reserva confirmada com sucesso!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sistema de Notificações -->
+    <div id="notifications-container" class="fixed top-4 right-4 z-50 space-y-2">
+        <!-- Notificações serão inseridas aqui dinamicamente -->
+    </div>
+
+    <!-- Modal de Configurações de Notificações -->
+    <div id="notification-settings-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="glass-dark p-6 rounded-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="notification-settings-content">
+            <h2 class="text-xl font-bold text-white mb-4">Configurações de Notificações</h2>
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <label class="text-white font-medium">Notificações de Reserva</label>
+                    <input type="checkbox" id="booking-notifications" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500" checked>
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="text-white font-medium">Notificações de Cancelamento</label>
+                    <input type="checkbox" id="cancellation-notifications" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500" checked>
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="text-white font-medium">Notificações de Sistema</label>
+                    <input type="checkbox" id="system-notifications" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500" checked>
+                </div>
+                <div class="flex items-center justify-between">
+                    <label class="text-white font-medium">Som de Notificação</label>
+                    <input type="checkbox" id="notification-sound" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500" checked>
+                </div>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button id="save-notification-settings" class="w-full bg-gradient-success text-white font-medium py-2 rounded-xl hover:shadow-lg flex items-center justify-center gap-2 btn-modern">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Guardar
+                </button>
+                <button id="cancel-notification-settings" class="w-full glass text-gray-200 font-medium py-2 rounded-xl hover:shadow-lg flex items-center justify-center gap-2 btn-modern">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Histórico de Notificações -->
+    <div id="notification-history-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="glass-dark p-6 rounded-2xl w-full max-w-2xl transform transition-all duration-300 scale-95 opacity-0" id="notification-history-content">
+            <h2 class="text-xl font-bold text-white mb-4">Histórico de Notificações</h2>
+            <div id="notification-history-list" class="max-h-96 overflow-y-auto space-y-2">
+                <!-- Histórico será inserido aqui -->
+            </div>
+            <div class="mt-6 flex justify-end">
+                <button id="close-notification-history" class="bg-gradient-primary text-white font-medium py-2 px-4 rounded-xl hover:shadow-lg flex items-center justify-center gap-2 btn-modern">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Fechar
+                </button>
             </div>
         </div>
     </div>

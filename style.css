@@ -532,6 +532,71 @@ input::placeholder, textarea::placeholder {
     animation: checkmark 0.6s ease-in-out;
 }
 
+/* ===== SISTEMA DE NOTIFICAÇÕES ===== */
+.notification {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--shadow-xl);
+}
+
+.notification:hover {
+    transform: translateX(-4px);
+    box-shadow: var(--shadow-2xl);
+}
+
+/* Animações para notificações */
+@keyframes slideInFromRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutToRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.notification-enter {
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+.notification-exit {
+    animation: slideOutToRight 0.3s ease-in;
+}
+
+/* Container de notificações */
+#notifications-container {
+    max-height: 80vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+#notifications-container::-webkit-scrollbar {
+    width: 4px;
+}
+
+#notifications-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#notifications-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 2px;
+}
+
 /* Melhorias de acessibilidade */
 @media (prefers-reduced-motion: reduce) {
     * {

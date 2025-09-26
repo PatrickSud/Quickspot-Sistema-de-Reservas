@@ -45,7 +45,15 @@ let state = {
         buildingDistribution: {},
         topUsers: [],
         recentBookings: []
-    }
+    },
+    // Sistema de Notificações
+    notificationSettings: {
+        booking: true,
+        cancellation: true,
+        system: true,
+        sound: true
+    },
+    notificationHistory: []
 };
 
 // --- UTILITY ---
@@ -360,6 +368,252 @@ const updateFavoriteDesks = (favoriteDesks) => {
             <span class="text-sm text-gray-400">${count} reservas</span>
         </div>
     `).join('');
+};
+
+// ===== SISTEMA DE NOTIFICAÇÕES =====
+
+// Função para criar uma notificação
+const createNotification = (type, title, message, duration = 5000) => {
+    const notification = document.createElement('div');
+    notification.className = `notification glass rounded-xl p-4 shadow-lg transform transition-all duration-300 translate-x-full opacity-0 max-w-sm`;
+    
+    // Cores baseadas no tipo
+    let bgColor = 'bg-blue-500';
+    let icon = '';
+    
+    switch (type) {
+        case 'success':
+            bgColor = 'bg-green-500';
+            icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>`;
+            break;
+        case 'error':
+            bgColor = 'bg-red-500';
+            icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>`;
+            break;
+        case 'warning':
+            bgColor = 'bg-yellow-500';
+            icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+            </svg>`;
+            break;
+        case 'info':
+        default:
+            bgColor = 'bg-blue-500';
+            icon = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>`;
+            break;
+    }
+    
+    notification.innerHTML = `
+        <div class="flex items-start gap-3">
+            <div class="flex-shrink-0 w-8 h-8 ${bgColor} rounded-full flex items-center justify-center text-white">
+                ${icon}
+            </div>
+            <div class="flex-1 min-w-0">
+                <h4 class="text-sm font-semibold text-white">${title}</h4>
+                <p class="text-xs text-gray-300 mt-1">${message}</p>
+            </div>
+            <button class="flex-shrink-0 text-gray-400 hover:text-white transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </button>
+        </div>
+    `;
+    
+    // Adicionar ao container
+    ui.notificationsContainer.appendChild(notification);
+    
+    // Animar entrada
+    setTimeout(() => {
+        notification.classList.remove('translate-x-full', 'opacity-0');
+        notification.classList.add('translate-x-0', 'opacity-100');
+    }, 100);
+    
+    // Event listener para fechar
+    const closeBtn = notification.querySelector('button');
+    closeBtn.addEventListener('click', () => {
+        removeNotification(notification);
+    });
+    
+    // Auto-remover após duração
+    if (duration > 0) {
+        setTimeout(() => {
+            removeNotification(notification);
+        }, duration);
+    }
+    
+    // Adicionar ao histórico
+    addToNotificationHistory(type, title, message);
+    
+    // Reproduzir som se habilitado
+    if (state.notificationSettings.sound) {
+        playNotificationSound();
+    }
+    
+    return notification;
+};
+
+// Função para remover notificação
+const removeNotification = (notification) => {
+    notification.classList.add('translate-x-full', 'opacity-0');
+    setTimeout(() => {
+        if (notification.parentNode) {
+            notification.parentNode.removeChild(notification);
+        }
+    }, 300);
+};
+
+// Função para adicionar ao histórico
+const addToNotificationHistory = (type, title, message) => {
+    const notification = {
+        id: Date.now(),
+        type,
+        title,
+        message,
+        timestamp: new Date().toISOString()
+    };
+    
+    state.notificationHistory.unshift(notification);
+    
+    // Manter apenas os últimos 50
+    if (state.notificationHistory.length > 50) {
+        state.notificationHistory = state.notificationHistory.slice(0, 50);
+    }
+    
+    // Salvar no localStorage
+    localStorage.setItem('notificationHistory', JSON.stringify(state.notificationHistory));
+};
+
+// Função para carregar histórico do localStorage
+const loadNotificationHistory = () => {
+    const saved = localStorage.getItem('notificationHistory');
+    if (saved) {
+        state.notificationHistory = JSON.parse(saved);
+    }
+};
+
+// Função para carregar configurações do localStorage
+const loadNotificationSettings = () => {
+    const saved = localStorage.getItem('notificationSettings');
+    if (saved) {
+        state.notificationSettings = { ...state.notificationSettings, ...JSON.parse(saved) };
+    }
+};
+
+// Função para salvar configurações
+const saveNotificationSettings = () => {
+    localStorage.setItem('notificationSettings', JSON.stringify(state.notificationSettings));
+};
+
+// Função para reproduzir som de notificação
+const playNotificationSound = () => {
+    try {
+        // Criar um som simples usando Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.2);
+    } catch (error) {
+        console.log('Não foi possível reproduzir som de notificação');
+    }
+};
+
+// Função para mostrar configurações de notificação
+const showNotificationSettings = () => {
+    // Carregar configurações atuais
+    ui.bookingNotifications.checked = state.notificationSettings.booking;
+    ui.cancellationNotifications.checked = state.notificationSettings.cancellation;
+    ui.systemNotifications.checked = state.notificationSettings.system;
+    ui.notificationSound.checked = state.notificationSettings.sound;
+    
+    // Mostrar modal
+    showModalWithAnimation(ui.notificationSettingsModal, ui.notificationSettingsContent);
+};
+
+// Função para mostrar histórico de notificações
+const showNotificationHistory = () => {
+    // Carregar histórico
+    loadNotificationHistory();
+    
+    // Limpar lista
+    ui.notificationHistoryList.innerHTML = '';
+    
+    if (state.notificationHistory.length === 0) {
+        ui.notificationHistoryList.innerHTML = '<div class="text-center text-gray-400 py-8">Nenhuma notificação no histórico</div>';
+    } else {
+        state.notificationHistory.forEach(notification => {
+            const item = document.createElement('div');
+            item.className = 'p-3 glass rounded-lg';
+            
+            let icon = '';
+            let bgColor = '';
+            
+            switch (notification.type) {
+                case 'success':
+                    bgColor = 'bg-green-500';
+                    icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>`;
+                    break;
+                case 'error':
+                    bgColor = 'bg-red-500';
+                    icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>`;
+                    break;
+                case 'warning':
+                    bgColor = 'bg-yellow-500';
+                    icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                    </svg>`;
+                    break;
+                default:
+                    bgColor = 'bg-blue-500';
+                    icon = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>`;
+                    break;
+            }
+            
+            const date = new Date(notification.timestamp);
+            const timeString = date.toLocaleString('pt-PT');
+            
+            item.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="flex-shrink-0 w-6 h-6 ${bgColor} rounded-full flex items-center justify-center text-white">
+                        ${icon}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="text-sm font-semibold text-white">${notification.title}</h4>
+                        <p class="text-xs text-gray-300 mt-1">${notification.message}</p>
+                        <p class="text-xs text-gray-400 mt-1">${timeString}</p>
+                    </div>
+                </div>
+            `;
+            
+            ui.notificationHistoryList.appendChild(item);
+        });
+    }
+    
+    // Mostrar modal
+    showModalWithAnimation(ui.notificationHistoryModal, ui.notificationHistoryContent);
 };
 
 // ===== DASHBOARD DO ADMINISTRADOR =====
@@ -961,8 +1215,18 @@ const cancelBooking = async (bookingId) => {
     try {
         await deleteDoc(doc(db, `/artifacts/${appId}/public/data/bookings/${bookingId}`));
         displayMessage("Reserva cancelada com sucesso!");
+        
+        // Notificação de cancelamento
+        if (state.notificationSettings.cancellation) {
+            createNotification('warning', 'Reserva Cancelada', 'A sua reserva foi cancelada com sucesso.');
+        }
     } catch (error) {
         displayMessage("Erro ao cancelar a reserva.", "error");
+        
+        // Notificação de erro
+        if (state.notificationSettings.system) {
+            createNotification('error', 'Erro ao Cancelar', 'Não foi possível cancelar a reserva. Tente novamente.');
+        }
     }
 };
 
@@ -977,6 +1241,10 @@ const initializeAppUI = () => {
     if (state.currentUser) listenForMyBookings();
     updateBookingDetails();
     goToStep(1);
+    
+    // Inicializar sistema de notificações
+    loadNotificationSettings();
+    loadNotificationHistory();
 };
 
 const showApp = async () => {
@@ -1137,6 +1405,11 @@ const setupEventListeners = () => {
                 
                 await addDoc(bookingsCollection, bookingData);
                 showSuccessModal("Reserva confirmada com sucesso!");
+                
+                // Notificação de reserva confirmada
+                if (state.notificationSettings.booking) {
+                    createNotification('success', 'Reserva Confirmada', `A sua reserva para ${state.selectedDeskId} foi confirmada com sucesso!`);
+                }
             }
             
             initializeAppUI(); // Reseta a UI para o estado inicial
@@ -1248,6 +1521,41 @@ const setupEventListeners = () => {
             console.error('Erro ao exportar dados:', error);
             alert('Erro ao exportar dados. Tente novamente.');
         }
+    });
+
+    // ===== SISTEMA DE NOTIFICAÇÕES - EVENT LISTENERS =====
+    
+    // Botão de configurações de notificação
+    ui.notificationSettingsBtn.addEventListener('click', () => {
+        showNotificationSettings();
+    });
+    
+    // Botão de histórico de notificações
+    ui.notificationHistoryBtn.addEventListener('click', () => {
+        showNotificationHistory();
+    });
+    
+    // Salvar configurações de notificação
+    ui.saveNotificationSettings.addEventListener('click', () => {
+        state.notificationSettings.booking = ui.bookingNotifications.checked;
+        state.notificationSettings.cancellation = ui.cancellationNotifications.checked;
+        state.notificationSettings.system = ui.systemNotifications.checked;
+        state.notificationSettings.sound = ui.notificationSound.checked;
+        
+        saveNotificationSettings();
+        hideModalWithAnimation(ui.notificationSettingsModal, ui.notificationSettingsContent);
+        
+        createNotification('success', 'Configurações Salvas', 'As suas configurações de notificação foram atualizadas.');
+    });
+    
+    // Cancelar configurações de notificação
+    ui.cancelNotificationSettings.addEventListener('click', () => {
+        hideModalWithAnimation(ui.notificationSettingsModal, ui.notificationSettingsContent);
+    });
+    
+    // Fechar histórico de notificações
+    ui.closeNotificationHistory.addEventListener('click', () => {
+        hideModalWithAnimation(ui.notificationHistoryModal, ui.notificationHistoryContent);
     });
 
     // ===== DASHBOARD DO ADMINISTRADOR - EVENT LISTENERS =====
