@@ -18,11 +18,95 @@ let state = {
     unsubscribeMyBookings: null,
     unsubscribeAdminListeners: null,
     isAdminView: false, // Novo: controla a visão do admin
+    currentFilters: {
+        tag: '',
+        status: '',
+        search: ''
+    },
+    currentDeskBookings: []
 };
 
 // --- UTILITY ---
 const isTimeOverlap = (start1, end1, start2, end2) => start1 < end2 && start2 < end1;
 const getTodayDateString = () => new Date().toISOString().split('T')[0];
+
+// Função para gerar datas recorrentes
+const generateRecurringDates = (startDate, endDate, frequency) => {
+    const dates = [];
+    const current = new Date(startDate);
+    
+    while (current <= endDate) {
+        dates.push(new Date(current));
+        
+        switch (frequency) {
+            case 'daily':
+                current.setDate(current.getDate() + 1);
+                break;
+            case 'weekly':
+                current.setDate(current.getDate() + 7);
+                break;
+            case 'monthly':
+                current.setMonth(current.getMonth() + 1);
+                break;
+        }
+    }
+    
+    return dates;
+};
+
+// Função para aplicar filtros
+const applyFilters = () => {
+    updateDesksUI(state.currentDeskBookings);
+};
+
+// Função para mostrar modal com animação
+const showModalWithAnimation = (modal, content) => {
+    show(modal);
+    setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+    }, 10);
+};
+
+// Função para esconder modal com animação
+const hideModalWithAnimation = (modal, content) => {
+    content.classList.remove('scale-100', 'opacity-100');
+    content.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => {
+        hide(modal);
+    }, 300);
+};
+
+// Função para mostrar modal de sucesso
+const showSuccessModal = (message) => {
+    ui.successMessage.textContent = message;
+    showModalWithAnimation(ui.successModal, ui.successModalContent);
+    setTimeout(() => {
+        hideModalWithAnimation(ui.successModal, ui.successModalContent);
+    }, 2000);
+};
+
+// Função para criar skeleton loading
+const createSkeletonLoading = () => {
+    const skeletonContainer = document.createElement('div');
+    skeletonContainer.className = 'skeleton-container bg-gray-900 p-6 rounded-xl border-2 border-gray-700';
+    skeletonContainer.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+            <div class="h-6 bg-gray-700 rounded w-48 animate-pulse"></div>
+            <div class="flex gap-4">
+                <div class="h-4 bg-gray-700 rounded w-20 animate-pulse"></div>
+                <div class="h-4 bg-gray-700 rounded w-20 animate-pulse"></div>
+                <div class="h-4 bg-gray-700 rounded w-20 animate-pulse"></div>
+            </div>
+        </div>
+        <div class="grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+            ${Array.from({length: 12}, () => `
+                <div class="bg-gray-700 rounded-lg h-20 animate-pulse"></div>
+            `).join('')}
+        </div>
+    `;
+    return skeletonContainer;
+};
 
 // --- CORE APP LOGIC ---
 const resetState = () => {
@@ -39,11 +123,34 @@ const resetState = () => {
 };
 
 const goToStep = (step) => {
-    hide(document.getElementById('step-1'));
-    hide(document.getElementById('step-2'));
-    hide(document.getElementById('step-3'));
-    hide(ui.bookingDetailsSummary);
-    show(document.getElementById(`step-${step}`));
+    const steps = ['step-1', 'step-2', 'step-3'];
+    const currentStep = steps.find(s => !document.getElementById(s).classList.contains('hidden'));
+    
+    if (currentStep) {
+        const currentElement = document.getElementById(currentStep);
+        currentElement.style.transform = 'translateX(-100%)';
+        currentElement.style.opacity = '0';
+        
+        setTimeout(() => {
+            hide(currentElement);
+            steps.forEach(s => hide(document.getElementById(s)));
+            hide(ui.bookingDetailsSummary);
+            
+            const newStep = document.getElementById(`step-${step}`);
+            show(newStep);
+            newStep.style.transform = 'translateX(100%)';
+            newStep.style.opacity = '0';
+            
+            setTimeout(() => {
+                newStep.style.transform = 'translateX(0)';
+                newStep.style.opacity = '1';
+            }, 10);
+        }, 300);
+    } else {
+        steps.forEach(s => hide(document.getElementById(s)));
+        hide(ui.bookingDetailsSummary);
+        show(document.getElementById(`step-${step}`));
+    }
 };
 
 // --- DATA & UI UPDATES ---
@@ -57,26 +164,120 @@ const updateBookingDetails = () => {
 };
 
 const updateDesksUI = (deskBookings) => {
+    state.currentDeskBookings = deskBookings;
+    
+    // Mostrar skeleton loading primeiro
     ui.desksContainer.innerHTML = '';
-    const desks = state.liveBuildingsData[state.selectedBuildingId].floors[state.selectedFloorId].desks;
-    desks.forEach(deskId => {
-        const card = document.createElement('div');
-        const isAvailable = !deskBookings.some(b => b.deskId === deskId);
-        const isSelected = state.selectedDeskId === deskId;
-        card.className = `card p-4 rounded-xl shadow-md text-center cursor-pointer transition-all ${isAvailable ? 'bg-gray-700 text-blue-300 hover:bg-gray-600' : 'bg-gray-900 text-gray-500 cursor-not-allowed'} ${isSelected ? 'ring-4 ring-blue-500' : ''}`;
-        card.innerHTML = `<h3 class="font-semibold text-lg">${deskId}</h3><p class="text-sm mt-1">${isAvailable ? 'Disponível' : 'Ocupado'}</p>`;
-        if (isAvailable) {
-            card.addEventListener('click', () => {
-                state.selectedDeskId = deskId;
-                updateBookingDetails();
-                hide(document.getElementById('step-3'));
-                show(ui.bookingDetailsSummary);
-                document.querySelectorAll('.card').forEach(c => c.classList.remove('ring-4', 'ring-blue-500'));
-                card.classList.add('ring-4', 'ring-blue-500');
-            });
+    const skeleton = createSkeletonLoading();
+    ui.desksContainer.appendChild(skeleton);
+    
+    // Simular carregamento e depois mostrar o conteúdo real
+    setTimeout(() => {
+        ui.desksContainer.innerHTML = '';
+        const floor = state.liveBuildingsData[state.selectedBuildingId].floors[state.selectedFloorId];
+        const desks = floor.desks;
+    
+    // Aplicar filtros
+    const filteredDesks = desks.filter(deskId => {
+        const desk = typeof deskId === 'string' ? { id: deskId, tags: [] } : deskId;
+        const isAvailable = !deskBookings.some(b => b.deskId === desk.id);
+        
+        // Filtro por tag
+        if (state.currentFilters.tag && (!desk.tags || !desk.tags.includes(state.currentFilters.tag))) {
+            return false;
         }
-        ui.desksContainer.appendChild(card);
+        
+        // Filtro por status
+        if (state.currentFilters.status === 'available' && !isAvailable) return false;
+        if (state.currentFilters.status === 'occupied' && isAvailable) return false;
+        
+        // Filtro por pesquisa
+        if (state.currentFilters.search && !desk.id.toLowerCase().includes(state.currentFilters.search.toLowerCase())) {
+            return false;
+        }
+        
+        return true;
     });
+    
+    // Criar o mapa visual do andar
+    const floorPlan = document.createElement('div');
+    floorPlan.className = 'floor-plan bg-gray-900 p-6 rounded-xl border-2 border-gray-700';
+    floorPlan.innerHTML = `
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold text-white">Mapa do Andar: ${floor.name}</h3>
+            <div class="flex gap-4 text-sm">
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-green-500 rounded"></div>
+                    <span class="text-gray-300">Disponível</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-red-500 rounded"></div>
+                    <span class="text-gray-300">Ocupado</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="w-4 h-4 bg-blue-500 rounded"></div>
+                    <span class="text-gray-300">Selecionado</span>
+                </div>
+            </div>
+        </div>
+        <div class="desks-grid grid gap-3" style="grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));">
+        </div>
+    `;
+    
+    const desksGrid = floorPlan.querySelector('.desks-grid');
+    
+    if (filteredDesks.length === 0) {
+        desksGrid.innerHTML = '<div class="col-span-full text-center text-gray-400 py-8">Nenhuma mesa encontrada com os filtros aplicados.</div>';
+    } else {
+        filteredDesks.forEach(deskId => {
+            const desk = typeof deskId === 'string' ? { id: deskId, tags: [] } : deskId;
+            const deskElement = document.createElement('div');
+            const isAvailable = !deskBookings.some(b => b.deskId === desk.id);
+            const isSelected = state.selectedDeskId === desk.id;
+            
+            // Determinar cor baseada no status
+            let bgColor = 'bg-gray-600'; // Padrão
+            if (isSelected) {
+                bgColor = 'bg-blue-500';
+            } else if (isAvailable) {
+                bgColor = 'bg-green-500';
+            } else {
+                bgColor = 'bg-red-500';
+            }
+            
+            deskElement.className = `desk-item ${bgColor} text-white p-3 rounded-lg text-center cursor-pointer transition-all hover:scale-105 shadow-md min-h-[80px] flex flex-col justify-center items-center relative`;
+            deskElement.innerHTML = `
+                <div class="font-semibold text-sm">${desk.id}</div>
+                ${desk.tags && desk.tags.length > 0 ? `<div class="text-xs mt-1 opacity-80">${desk.tags.join(', ')}</div>` : ''}
+            `;
+            
+            if (isAvailable) {
+                deskElement.addEventListener('click', () => {
+                    state.selectedDeskId = desk.id;
+                    updateBookingDetails();
+                    hide(document.getElementById('step-3'));
+                    show(ui.bookingDetailsSummary);
+                    
+                    // Atualizar visualização
+                    document.querySelectorAll('.desk-item').forEach(d => {
+                        d.classList.remove('bg-blue-500');
+                        if (!deskBookings.some(b => b.deskId === d.textContent.trim().split('\n')[0])) {
+                            d.classList.add('bg-green-500');
+                        }
+                    });
+                    deskElement.classList.remove('bg-green-500');
+                    deskElement.classList.add('bg-blue-500');
+                });
+            } else {
+                deskElement.classList.add('cursor-not-allowed');
+            }
+            
+            desksGrid.appendChild(deskElement);
+        });
+    }
+    
+    ui.desksContainer.appendChild(floorPlan);
+    }, 800); // Delay para mostrar o skeleton
 };
 
 const updateMyBookingsUI = (bookings) => {
@@ -109,12 +310,12 @@ const showModal = (title, contentHtml, onSaveCallback) => {
     ui.admin.modal.title.textContent = title;
     ui.admin.modal.content.innerHTML = contentHtml;
     modalState.onSave = onSaveCallback;
-    show(ui.admin.modal.container);
+    showModalWithAnimation(ui.admin.modal.container, ui.genericModalContent);
 };
 
 // Função para esconder o modal
 const hideModal = () => {
-    hide(ui.admin.modal.container);
+    hideModalWithAnimation(ui.admin.modal.container, ui.genericModalContent);
     modalState.onSave = null;
     ui.admin.modal.content.innerHTML = '';
 };
@@ -158,10 +359,12 @@ const renderLayoutManager = () => {
 
             const desksContainer = floorEl.querySelector(`#desks-container-${floorId}`);
             floor.desks.forEach(deskId => {
+                const desk = typeof deskId === 'string' ? { id: deskId, tags: [] } : deskId;
+                const tagsDisplay = desk.tags && desk.tags.length > 0 ? ` (${desk.tags.join(', ')})` : '';
                 desksContainer.innerHTML += `
                     <div class="bg-gray-600 px-2 py-1 rounded-full text-xs flex items-center gap-2">
-                        <span>${deskId}</span>
-                        <button class="remove-btn text-gray-300 hover:text-white" data-type="desk" data-id="${deskId}" data-parent-id="${floorId}" data-grandparent-id="${buildingId}">&times;</button>
+                        <span>${desk.id}${tagsDisplay}</span>
+                        <button class="remove-btn text-gray-300 hover:text-white" data-type="desk" data-id="${desk.id}" data-parent-id="${floorId}" data-grandparent-id="${buildingId}">&times;</button>
                     </div>`;
             });
             floorsContainer.appendChild(floorEl);
@@ -403,40 +606,112 @@ const setupEventListeners = () => {
             return displayMessage("Por favor, preencha todos os campos.", "error");
         }
 
-        // Estrutura de dados mais organizada
-        const bookingData = {
-            // Detalhes do utilizador que fez a reserva
-            userDetails: {
-                email: state.currentUser.email,
-                uid: state.currentUser.uid
-            },
-            // Detalhes da reserva
-            bookingDetails: {
-                date: state.selectedDate,
-                startTime: state.selectedStartTime,
-                endTime: state.selectedEndTime,
-            },
-            // Detalhes da localização
-            locationDetails: {
-                buildingId: state.selectedBuildingId,
-                floorId: state.selectedFloorId,
-                deskId: state.selectedDeskId
-            },
-            // Timestamp para saber quando a reserva foi criada
-            createdAt: serverTimestamp()
-        };
-
         try {
-            // Usamos addDoc para que o Firestore gere um ID único automaticamente
             const bookingsCollection = collection(db, `/artifacts/${appId}/public/data/bookings`);
-            await addDoc(bookingsCollection, bookingData);
-
-            displayMessage("Reserva confirmada com sucesso!");
+            
+            // Verificar se é uma reserva recorrente
+            if (ui.recurringBooking.checked) {
+                const frequency = ui.recurringFrequency.value;
+                const endDate = new Date(ui.recurringEndDate.value);
+                const startDate = new Date(state.selectedDate);
+                
+                if (endDate <= startDate) {
+                    return displayMessage("A data de fim deve ser posterior à data de início.", "error");
+                }
+                
+                const dates = generateRecurringDates(startDate, endDate, frequency);
+                
+                for (const date of dates) {
+                    const bookingData = {
+                        userDetails: {
+                            email: state.currentUser.email,
+                            uid: state.currentUser.uid
+                        },
+                        bookingDetails: {
+                            date: date.toISOString().split('T')[0],
+                            startTime: state.selectedStartTime,
+                            endTime: state.selectedEndTime,
+                        },
+                        locationDetails: {
+                            buildingId: state.selectedBuildingId,
+                            floorId: state.selectedFloorId,
+                            deskId: state.selectedDeskId
+                        },
+                        createdAt: serverTimestamp(),
+                        isRecurring: true
+                    };
+                    
+                    await addDoc(bookingsCollection, bookingData);
+                }
+                
+                showSuccessModal(`${dates.length} reservas recorrentes confirmadas com sucesso!`);
+            } else {
+                // Reserva única
+                const bookingData = {
+                    userDetails: {
+                        email: state.currentUser.email,
+                        uid: state.currentUser.uid
+                    },
+                    bookingDetails: {
+                        date: state.selectedDate,
+                        startTime: state.selectedStartTime,
+                        endTime: state.selectedEndTime,
+                    },
+                    locationDetails: {
+                        buildingId: state.selectedBuildingId,
+                        floorId: state.selectedFloorId,
+                        deskId: state.selectedDeskId
+                    },
+                    createdAt: serverTimestamp(),
+                    isRecurring: false
+                };
+                
+                await addDoc(bookingsCollection, bookingData);
+                showSuccessModal("Reserva confirmada com sucesso!");
+            }
+            
             initializeAppUI(); // Reseta a UI para o estado inicial
 
         } catch (e) {
             console.error("Erro ao fazer a reserva: ", e);
             displayMessage("Ocorreu um erro ao tentar fazer a reserva.", "error");
+        }
+    });
+
+    // --- Filtros ---
+    ui.tagFilter.addEventListener('change', (e) => {
+        state.currentFilters.tag = e.target.value;
+        applyFilters();
+    });
+    
+    ui.statusFilter.addEventListener('change', (e) => {
+        state.currentFilters.status = e.target.value;
+        applyFilters();
+    });
+    
+    ui.searchFilter.addEventListener('input', (e) => {
+        state.currentFilters.search = e.target.value;
+        applyFilters();
+    });
+    
+    ui.clearFiltersBtn.addEventListener('click', () => {
+        state.currentFilters = { tag: '', status: '', search: '' };
+        ui.tagFilter.value = '';
+        ui.statusFilter.value = '';
+        ui.searchFilter.value = '';
+        applyFilters();
+    });
+    
+    // --- Reservas Recorrentes ---
+    ui.recurringBooking.addEventListener('change', (e) => {
+        if (e.target.checked) {
+            show(ui.recurringOptions);
+            // Definir data de fim padrão (1 mês a partir de hoje)
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + 1);
+            ui.recurringEndDate.value = endDate.toISOString().split('T')[0];
+        } else {
+            hide(ui.recurringOptions);
         }
     });
 
@@ -490,15 +765,23 @@ const setupEventListeners = () => {
                     <input type="text" id="modal-input-prefix" placeholder="Prefixo (Ex: Mesa, Posto)" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
                     <input type="number" id="modal-input-quantity" placeholder="Quantidade" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
                     <input type="number" id="modal-input-start" placeholder="Número Inicial" value="1" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
+                    <div class="mt-4">
+                        <label class="block text-sm font-medium text-gray-300 mb-2">Tags (separadas por vírgula):</label>
+                        <input type="text" id="modal-input-tags" placeholder="Ex: janela, monitores, silencioso" class="w-full px-4 py-3 bg-gray-700 text-white rounded-xl">
+                    </div>
                 `;
                 showModal('Adicionar Mesas em Massa', content, () => {
                     const prefix = document.getElementById('modal-input-prefix').value;
                     const quantity = parseInt(document.getElementById('modal-input-quantity').value);
                     const startNum = parseInt(document.getElementById('modal-input-start').value);
+                    const tagsInput = document.getElementById('modal-input-tags').value;
+                    const tags = tagsInput ? tagsInput.split(',').map(tag => tag.trim()).filter(tag => tag) : [];
+                    
                     if (prefix && quantity > 0) {
                         for (let i = 0; i < quantity; i++) {
                             const deskId = `${prefix} ${startNum + i}`;
-                            state.liveBuildingsData[grandparentId].floors[parentId].desks.push(deskId);
+                            const deskObject = { id: deskId, tags: tags };
+                            state.liveBuildingsData[grandparentId].floors[parentId].desks.push(deskObject);
                         }
                         renderLayoutManager();
                         hideModal();

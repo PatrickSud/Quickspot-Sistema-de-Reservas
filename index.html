@@ -17,8 +17,18 @@
                 <input type="password" id="password-input" placeholder="A sua palavra-passe" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
             </div>
             <div class="flex flex-col sm:flex-row gap-3">
-                <button id="login-button" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors">Entrar</button>
-                <button id="signup-button" class="w-full bg-indigo-600 text-white font-medium py-3 rounded-xl hover:bg-indigo-700 transition-colors">Cadastrar</button>
+                <button id="login-button" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                    </svg>
+                    Entrar
+                </button>
+                <button id="signup-button" class="w-full bg-indigo-600 text-white font-medium py-3 rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    </svg>
+                    Cadastrar
+                </button>
             </div>
             <div id="config-error-box" class="hidden mt-6 p-4 rounded-xl bg-red-900 border border-red-700 text-red-200">
                 <h4 class="font-bold">Ação Requerida</h4>
@@ -49,8 +59,19 @@
             <div class="flex justify-between items-center mb-6">
                 <h1 id="app-title" class="text-3xl sm:text-4xl font-bold text-white">Reservar Espaço</h1>
                 <div>
-                    <button id="toggle-admin-view-btn" class="hidden bg-yellow-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-yellow-700 transition-colors text-sm mr-2">Dashboard</button>
-                    <button id="logout-button" class="bg-red-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-red-700 transition-colors text-sm">Sair</button>
+                    <button id="toggle-admin-view-btn" class="hidden bg-yellow-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-yellow-700 transition-colors text-sm mr-2 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                        Dashboard
+                    </button>
+                    <button id="logout-button" class="bg-red-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-red-700 transition-colors text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                        </svg>
+                        Sair
+                    </button>
                 </div>
             </div>
 
@@ -65,7 +86,12 @@
                         <label for="building-select" class="block text-sm font-medium text-gray-300 mb-2">Selecione o Edifício:</label>
                         <select id="building-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"></select>
                     </div>
-                    <button id="next-to-floor" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors opacity-50 cursor-not-allowed" disabled>Avançar</button>
+                    <button id="next-to-floor" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors opacity-50 cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+                        </svg>
+                        Avançar
+                    </button>
                 </div>
                 <div id="step-2" class="step-container hidden">
                     <h2 class="text-2xl font-semibold mb-4 text-gray-100">2. Escolha o Andar e o Horário</h2>
@@ -83,13 +109,67 @@
                             <select id="end-time-select" class="w-full px-4 py-3 bg-gray-700 border border-gray-600 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"></select>
                         </div>
                     </div>
-                    <button id="next-to-desks" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors opacity-50 cursor-not-allowed" disabled>Ver Mesas Disponíveis</button>
-                    <button id="back-to-building" class="w-full mt-2 bg-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-500 transition-colors">Voltar</button>
+                    <button id="next-to-desks" class="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition-colors opacity-50 cursor-not-allowed flex items-center justify-center gap-2" disabled>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                        </svg>
+                        Ver Mesas Disponíveis
+                    </button>
+                    <button id="back-to-building" class="w-full mt-2 bg-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-500 transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                        </svg>
+                        Voltar
+                    </button>
                 </div>
                 <div id="step-3" class="step-container hidden">
                     <h2 class="text-2xl font-semibold mb-4 text-gray-100">3. Selecione o Lugar</h2>
-                    <div id="desks-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6"></div>
-                    <button id="back-to-floor" class="w-full mt-2 bg-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-500 transition-colors">Voltar</button>
+                    
+                    <!-- Filtros de Pesquisa -->
+                    <div class="filters-section mb-6 p-4 bg-gray-800 rounded-xl">
+                        <h3 class="text-lg font-semibold text-white mb-3">Filtros</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Características:</label>
+                                <select id="tag-filter" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm">
+                                    <option value="">Todas as características</option>
+                                    <option value="janela">Perto da janela</option>
+                                    <option value="monitores">Com monitores</option>
+                                    <option value="silencioso">Silencioso</option>
+                                    <option value="privado">Privado</option>
+                                    <option value="colaborativo">Colaborativo</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Status:</label>
+                                <select id="status-filter" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm">
+                                    <option value="">Todos</option>
+                                    <option value="available">Disponíveis</option>
+                                    <option value="occupied">Ocupados</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Pesquisar:</label>
+                                <input type="text" id="search-filter" placeholder="Nome da mesa..." class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm">
+                            </div>
+                            <div class="flex items-end">
+                                <button id="clear-filters" class="w-full bg-gray-600 text-white font-medium py-2 px-3 rounded-lg hover:bg-gray-500 text-sm flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                                    </svg>
+                                    Limpar Filtros
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="desks-container" class="mb-6"></div>
+                    <button id="back-to-floor" class="w-full mt-2 bg-gray-600 text-gray-200 font-medium py-3 rounded-xl hover:bg-gray-500 transition-colors flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                        </svg>
+                        Voltar
+                    </button>
                 </div>
                 <div id="booking-details-summary" class="hidden p-5 border border-gray-700 rounded-xl bg-gray-900 mt-6">
                     <h2 class="text-xl font-semibold text-white mb-2">Detalhes da Reserva:</h2>
@@ -101,7 +181,35 @@
                         <p>Andar: <span id="selected-floor-display"></span></p>
                         <p>Mesa: <span id="selected-desk-display"></span></p>
                     </div>
-                    <button id="book-button" class="w-full bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700 transition-colors mt-4">Confirmar Reserva</button>
+                    
+                    <!-- Opção de Reserva Recorrente -->
+                    <div class="mt-4 p-4 bg-gray-800 rounded-lg">
+                        <div class="flex items-center gap-2 mb-3">
+                            <input type="checkbox" id="recurring-booking" class="w-4 h-4 text-blue-600 bg-gray-700 border-gray-600 rounded focus:ring-blue-500">
+                            <label for="recurring-booking" class="text-sm font-medium text-gray-300">Reserva Recorrente</label>
+                        </div>
+                        <div id="recurring-options" class="hidden space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Repetir:</label>
+                                <select id="recurring-frequency" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm">
+                                    <option value="weekly">Semanalmente</option>
+                                    <option value="daily">Diariamente</option>
+                                    <option value="monthly">Mensalmente</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300 mb-1">Até:</label>
+                                <input type="date" id="recurring-end-date" class="w-full px-3 py-2 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button id="book-button" class="w-full bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700 transition-colors mt-4 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                        Confirmar Reserva
+                    </button>
                 </div>
                 <div id="my-bookings-section" class="mt-8">
                     <h2 class="text-2xl font-semibold text-white mb-4">As Minhas Reservas</h2>
@@ -118,12 +226,22 @@
                 <div>
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-semibold text-white">Gestor Visual de Espaços</h3>
-                        <button id="add-building-btn" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-xl hover:bg-blue-700 text-sm">Novo Edifício</button>
+                        <button id="add-building-btn" class="bg-blue-600 text-white font-medium py-2 px-4 rounded-xl hover:bg-blue-700 text-sm flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Novo Edifício
+                        </button>
                     </div>
                     <div id="layout-manager" class="bg-gray-900 p-5 rounded-xl space-y-4">
                         </div>
                     <div class="mt-4">
-                         <button id="save-layout-btn" class="w-full bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700">Guardar Alterações na Estrutura</button>
+                         <button id="save-layout-btn" class="w-full bg-green-600 text-white font-medium py-3 rounded-xl hover:bg-green-700 flex items-center justify-center gap-2">
+                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path>
+                             </svg>
+                             Guardar Alterações na Estrutura
+                         </button>
                     </div>
                 </div>
             </div>
@@ -132,14 +250,40 @@
         <div id="loading-spinner" class="hidden text-center mt-6"><div class="animate-spin inline-block w-8 h-8 border-4 border-blue-500 border-solid rounded-full border-t-transparent"></div><p class="text-gray-400 mt-2">A carregar...</p></div>
     </div>
 
-    <div id="generic-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4">
-        <div class="bg-gray-800 p-6 rounded-2xl w-full max-w-md">
+    <!-- Modal Genérico -->
+    <div id="generic-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-6 rounded-2xl w-full max-w-md transform transition-all duration-300 scale-95 opacity-0" id="generic-modal-content">
             <h2 id="modal-title" class="text-xl font-bold text-white mb-4">Título do Modal</h2>
             <div id="modal-content" class="space-y-4">
                 </div>
             <div class="mt-6 flex gap-3">
-                <button id="modal-save-btn" class="w-full bg-green-600 text-white font-medium py-2 rounded-xl hover:bg-green-700">Guardar</button>
-                <button id="modal-cancel-btn" class="w-full bg-gray-600 text-gray-200 font-medium py-2 rounded-xl hover:bg-gray-500">Cancelar</button>
+                <button id="modal-save-btn" class="w-full bg-green-600 text-white font-medium py-2 rounded-xl hover:bg-green-700 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                    Guardar
+                </button>
+                <button id="modal-cancel-btn" class="w-full bg-gray-600 text-gray-200 font-medium py-2 rounded-xl hover:bg-gray-500 flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Cancelar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Sucesso -->
+    <div id="success-modal" class="hidden fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+        <div class="bg-gray-800 p-8 rounded-2xl w-full max-w-sm text-center transform transition-all duration-300 scale-95 opacity-0" id="success-modal-content">
+            <div class="mb-4">
+                <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                    <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-white mb-2">Sucesso!</h3>
+                <p id="success-message" class="text-gray-300">Reserva confirmada com sucesso!</p>
             </div>
         </div>
     </div>

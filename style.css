@@ -19,6 +19,102 @@ body {
     to { opacity: 1; transform: translateY(0); }
 }
 
+/* Animações de transição */
+.step-container {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animações para modais */
+.modal-content {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Animações para botões */
+button {
+    transition: all 0.2s ease-in-out;
+}
+
+button:hover {
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* Animações para cards de mesa */
+.desk-item {
+    transition: all 0.2s ease-in-out;
+}
+
+.desk-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+/* Skeleton loading animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.5;
+    }
+}
+
+.animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Animações de entrada */
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Animações para elementos de sucesso */
+@keyframes checkmark {
+    0% {
+        transform: scale(0);
+    }
+    50% {
+        transform: scale(1.2);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.success-checkmark {
+    animation: checkmark 0.6s ease-in-out;
+}
+
+/* Melhorias de acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+    * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
 input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
 }

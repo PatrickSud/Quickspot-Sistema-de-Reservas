@@ -30,6 +30,21 @@ export const ui = {
     bookingDetailsSummary: document.getElementById('booking-details-summary'),
     fillAdminBtn: document.getElementById('fill-admin-btn'),
     fillUserBtn: document.getElementById('fill-user-btn'),
+    // Filtros
+    tagFilter: document.getElementById('tag-filter'),
+    statusFilter: document.getElementById('status-filter'),
+    searchFilter: document.getElementById('search-filter'),
+    clearFiltersBtn: document.getElementById('clear-filters'),
+    // Reservas recorrentes
+    recurringBooking: document.getElementById('recurring-booking'),
+    recurringOptions: document.getElementById('recurring-options'),
+    recurringFrequency: document.getElementById('recurring-frequency'),
+    recurringEndDate: document.getElementById('recurring-end-date'),
+    // Modais
+    successModal: document.getElementById('success-modal'),
+    successModalContent: document.getElementById('success-modal-content'),
+    successMessage: document.getElementById('success-message'),
+    genericModalContent: document.getElementById('generic-modal-content'),
     admin: {
         manageBtn: document.getElementById('manage-layout-btn'),
         editor: document.getElementById('layout-json-editor'),
