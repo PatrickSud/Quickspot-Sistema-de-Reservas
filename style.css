@@ -610,6 +610,55 @@ input[type="date"]::-webkit-calendar-picker-indicator {
     filter: invert(1);
 }
 
+/* ===== ESTILOS PARA SELECTS ===== */
+select {
+    background-color: #374151 !important; /* bg-gray-700 */
+    color: #ffffff !important;
+    border-color: #4b5563 !important; /* border-gray-600 */
+}
+
+select:focus {
+    background-color: #374151 !important;
+    color: #ffffff !important;
+    border-color: #3b82f6 !important; /* focus:ring-blue-500 */
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5) !important;
+}
+
+select option {
+    background-color: #374151 !important; /* bg-gray-700 */
+    color: #ffffff !important;
+    padding: 8px 12px;
+}
+
+select option:hover {
+    background-color: #4b5563 !important; /* bg-gray-600 */
+    color: #ffffff !important;
+}
+
+select option:checked {
+    background-color: #3b82f6 !important; /* bg-blue-500 */
+    color: #ffffff !important;
+}
+
+/* Estilos específicos para diferentes navegadores */
+select::-ms-expand {
+    background-color: #374151;
+    color: #ffffff;
+}
+
+/* Firefox */
+select {
+    -moz-appearance: none;
+    appearance: none;
+}
+
+/* Webkit (Chrome, Safari) */
+select::-webkit-select {
+    background-color: #374151;
+    color: #ffffff;
+}
+
 #layout-json-editor {
     min-height: 400px;
     font-family: monospace;

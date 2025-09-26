@@ -1167,6 +1167,8 @@ const toggleAdminSpaceManager = (showSpaceManager = false) => {
     if (showSpaceManager) {
         ui.adminDashboard.classList.add('hidden');
         ui.spaceManager.classList.remove('hidden');
+        // Renderizar o gestor de espaços com os dados existentes
+        renderLayoutManager();
     } else {
         ui.adminDashboard.classList.remove('hidden');
         ui.spaceManager.classList.add('hidden');
