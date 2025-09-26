@@ -23,7 +23,18 @@ let state = {
         status: '',
         search: ''
     },
-    currentDeskBookings: []
+    currentDeskBookings: [],
+    // Dashboard do Utilizador
+    userStats: {
+        monthlyBookings: 0,
+        totalHours: 0,
+        favoriteDesk: null,
+        usageFrequency: 0,
+        weeklyData: [],
+        floorDistribution: {},
+        upcomingBookings: [],
+        favoriteDesks: []
+    }
 };
 
 // --- UTILITY ---
@@ -106,6 +117,238 @@ const createSkeletonLoading = () => {
         </div>
     `;
     return skeletonContainer;
+};
+
+// ===== DASHBOARD DO UTILIZADOR =====
+
+// Função para calcular estatísticas do utilizador
+const calculateUserStats = async (bookings) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Filtrar reservas do mês atual
+    const monthlyBookings = bookings.filter(booking => {
+        const bookingDate = new Date(booking.bookingDetails.date);
+        return bookingDate.getMonth() === currentMonth && bookingDate.getFullYear() === currentYear;
+    });
+    
+    // Calcular tempo total reservado
+    let totalMinutes = 0;
+    bookings.forEach(booking => {
+        const start = booking.bookingDetails.startTime.split(':');
+        const end = booking.bookingDetails.endTime.split(':');
+        const startMinutes = parseInt(start[0]) * 60 + parseInt(start[1]);
+        const endMinutes = parseInt(end[0]) * 60 + parseInt(end[1]);
+        totalMinutes += (endMinutes - startMinutes);
+    });
+    
+    const totalHours = Math.round(totalMinutes / 60);
+    
+    // Encontrar mesa favorita
+    const deskCounts = {};
+    bookings.forEach(booking => {
+        const deskId = booking.locationDetails.deskId;
+        deskCounts[deskId] = (deskCounts[deskId] || 0) + 1;
+    });
+    
+    const favoriteDesk = Object.keys(deskCounts).length > 0 
+        ? Object.keys(deskCounts).reduce((a, b) => deskCounts[a] > deskCounts[b] ? a : b)
+        : null;
+    
+    // Calcular frequência de uso (dias únicos com reservas)
+    const uniqueDays = new Set(bookings.map(booking => booking.bookingDetails.date)).size;
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const usageFrequency = Math.round((uniqueDays / daysInMonth) * 100);
+    
+    // Dados semanais (últimas 4 semanas)
+    const weeklyData = [];
+    for (let i = 3; i >= 0; i--) {
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - (now.getDay() + 7 * i));
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        
+        const weekBookings = bookings.filter(booking => {
+            const bookingDate = new Date(booking.bookingDetails.date);
+            return bookingDate >= weekStart && bookingDate <= weekEnd;
+        });
+        
+        weeklyData.push({
+            week: `Semana ${4 - i}`,
+            count: weekBookings.length
+        });
+    }
+    
+    // Distribuição por andar
+    const floorDistribution = {};
+    bookings.forEach(booking => {
+        const floorId = booking.locationDetails.floorId;
+        const buildingId = booking.locationDetails.buildingId;
+        const floorName = state.liveBuildingsData[buildingId]?.floors[floorId]?.name || 'Andar Desconhecido';
+        floorDistribution[floorName] = (floorDistribution[floorName] || 0) + 1;
+    });
+    
+    // Próximas reservas (próximas 5)
+    const upcomingBookings = bookings
+        .filter(booking => new Date(booking.bookingDetails.date) >= now)
+        .sort((a, b) => new Date(a.bookingDetails.date) - new Date(b.bookingDetails.date))
+        .slice(0, 5);
+    
+    // Mesas favoritas (top 3)
+    const favoriteDesks = Object.entries(deskCounts)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3)
+        .map(([deskId, count]) => ({ deskId, count }));
+    
+    return {
+        monthlyBookings: monthlyBookings.length,
+        totalHours,
+        favoriteDesk,
+        usageFrequency,
+        weeklyData,
+        floorDistribution,
+        upcomingBookings,
+        favoriteDesks
+    };
+};
+
+// Função para atualizar o dashboard do utilizador
+const updateUserDashboard = async () => {
+    if (!state.currentUser) return;
+    
+    try {
+        // Buscar todas as reservas do utilizador
+        const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
+        const q = query(bookingsRef, where('userDetails.uid', '==', state.currentUser.uid));
+        const snapshot = await getDocs(q);
+        const bookings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        
+        // Calcular estatísticas
+        const stats = await calculateUserStats(bookings);
+        state.userStats = stats;
+        
+        // Atualizar UI
+        ui.monthlyBookings.textContent = stats.monthlyBookings;
+        ui.totalHours.textContent = `${stats.totalHours}h`;
+        ui.favoriteDesk.textContent = stats.favoriteDesk || '-';
+        ui.usageFrequency.textContent = `${stats.usageFrequency}%`;
+        
+        // Atualizar gráfico semanal
+        updateWeeklyChart(stats.weeklyData);
+        
+        // Atualizar distribuição por andar
+        updateFloorDistribution(stats.floorDistribution);
+        
+        // Atualizar próximas reservas
+        updateUpcomingBookings(stats.upcomingBookings);
+        
+        // Atualizar mesas favoritas
+        updateFavoriteDesks(stats.favoriteDesks);
+        
+    } catch (error) {
+        console.error('Erro ao atualizar dashboard:', error);
+    }
+};
+
+// Função para atualizar gráfico semanal
+const updateWeeklyChart = (weeklyData) => {
+    const maxCount = Math.max(...weeklyData.map(w => w.count), 1);
+    
+    ui.weeklyChart.innerHTML = `
+        <div class="w-full h-full flex items-end justify-between gap-2">
+            ${weeklyData.map(week => {
+                const height = (week.count / maxCount) * 100;
+                return `
+                    <div class="flex flex-col items-center gap-2 flex-1">
+                        <div class="w-full bg-gradient-primary rounded-t-lg transition-all duration-500 hover:bg-gradient-secondary" 
+                             style="height: ${height}%; min-height: 20px;">
+                        </div>
+                        <div class="text-xs text-gray-400">${week.week}</div>
+                        <div class="text-sm font-semibold text-white">${week.count}</div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+};
+
+// Função para atualizar distribuição por andar
+const updateFloorDistribution = (floorDistribution) => {
+    if (Object.keys(floorDistribution).length === 0) {
+        ui.floorDistribution.innerHTML = '<div class="text-gray-400">Nenhuma reserva encontrada</div>';
+        return;
+    }
+    
+    const total = Object.values(floorDistribution).reduce((sum, count) => sum + count, 0);
+    
+    ui.floorDistribution.innerHTML = Object.entries(floorDistribution)
+        .sort(([,a], [,b]) => b - a)
+        .map(([floorName, count]) => {
+            const percentage = Math.round((count / total) * 100);
+            return `
+                <div class="flex items-center justify-between p-3 glass rounded-lg">
+                    <span class="text-white font-medium">${floorName}</span>
+                    <div class="flex items-center gap-3">
+                        <div class="w-20 bg-gray-700 rounded-full h-2">
+                            <div class="bg-gradient-primary h-2 rounded-full transition-all duration-500" 
+                                 style="width: ${percentage}%"></div>
+                        </div>
+                        <span class="text-sm text-gray-400 w-8">${count}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+};
+
+// Função para atualizar próximas reservas
+const updateUpcomingBookings = (upcomingBookings) => {
+    if (upcomingBookings.length === 0) {
+        ui.upcomingBookings.innerHTML = '<div class="text-gray-400">Nenhuma reserva futura</div>';
+        return;
+    }
+    
+    ui.upcomingBookings.innerHTML = upcomingBookings.map(booking => {
+        const buildingName = state.liveBuildingsData[booking.locationDetails.buildingId]?.name || 'Edifício';
+        const floorName = state.liveBuildingsData[booking.locationDetails.buildingId]?.floors[booking.locationDetails.floorId]?.name || 'Andar';
+        
+        return `
+            <div class="p-3 glass rounded-lg">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-semibold text-white">${booking.locationDetails.deskId}</p>
+                        <p class="text-sm text-gray-400">${buildingName} - ${floorName}</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm text-white">${booking.bookingDetails.date}</p>
+                        <p class="text-xs text-gray-400">${booking.bookingDetails.startTime} - ${booking.bookingDetails.endTime}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+};
+
+// Função para atualizar mesas favoritas
+const updateFavoriteDesks = (favoriteDesks) => {
+    if (favoriteDesks.length === 0) {
+        ui.favoriteDesks.innerHTML = '<div class="text-gray-400">Nenhuma mesa favorita ainda</div>';
+        return;
+    }
+    
+    ui.favoriteDesks.innerHTML = favoriteDesks.map(({ deskId, count }) => `
+        <div class="p-3 glass rounded-lg flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-gradient-warning rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                    </svg>
+                </div>
+                <span class="font-semibold text-white">${deskId}</span>
+            </div>
+            <span class="text-sm text-gray-400">${count} reservas</span>
+        </div>
+    `).join('');
 };
 
 // --- CORE APP LOGIC ---
@@ -290,12 +533,15 @@ const updateMyBookingsUI = (bookings) => {
             const buildingName = state.liveBuildingsData[booking.buildingId]?.name || 'Edifício Removido';
             const floorName = state.liveBuildingsData[booking.buildingId]?.floors[booking.floorId]?.name || 'Andar Removido';
             const item = document.createElement('div');
-            item.className = 'my-booking-item flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-gray-700 rounded-xl shadow';
-            item.innerHTML = `<div><p class="font-medium text-white">${booking.deskId} (${buildingName}, ${floorName})</p><p class="text-sm text-gray-300">${booking.date} das ${booking.startTime} às ${booking.endTime}</p></div><button class="cancel-button mt-2 sm:mt-0 bg-red-800 text-red-200 px-3 py-1 rounded-full text-sm font-medium hover:bg-red-700" data-booking-id="${booking.id}">Cancelar</button>`;
+            item.className = 'my-booking-item flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 card-modern rounded-xl';
+            item.innerHTML = `<div><p class="font-medium text-white">${booking.deskId} (${buildingName}, ${floorName})</p><p class="text-sm text-gray-300">${booking.date} das ${booking.startTime} às ${booking.endTime}</p></div><button class="cancel-button mt-2 sm:mt-0 bg-gradient-error text-white px-3 py-1 rounded-full text-sm font-medium hover:shadow-lg btn-modern" data-booking-id="${booking.id}">Cancelar</button>`;
             ui.myBookingsList.appendChild(item);
         });
         document.querySelectorAll('.cancel-button').forEach(button => button.addEventListener('click', e => cancelBooking(e.target.dataset.bookingId)));
     }
+    
+    // Atualizar dashboard após atualizar reservas
+    updateUserDashboard();
 };
 
 // --- ADMIN DASHBOARD ---
@@ -712,6 +958,72 @@ const setupEventListeners = () => {
             ui.recurringEndDate.value = endDate.toISOString().split('T')[0];
         } else {
             hide(ui.recurringOptions);
+        }
+    });
+
+    // ===== DASHBOARD DO UTILIZADOR - EVENT LISTENERS =====
+    
+    // Botão de reserva rápida
+    ui.quickBookBtn.addEventListener('click', () => {
+        // Voltar ao passo 1 para nova reserva
+        goToStep(1);
+        // Scroll para o topo
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+    // Botão de ver histórico
+    ui.viewHistoryBtn.addEventListener('click', () => {
+        // Scroll para a seção de reservas
+        document.getElementById('my-bookings-section').scrollIntoView({ 
+            behavior: 'smooth' 
+        });
+    });
+
+    // Botão de exportar dados
+    ui.exportDataBtn.addEventListener('click', async () => {
+        try {
+            if (!state.currentUser) return;
+            
+            // Buscar todas as reservas do utilizador
+            const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
+            const q = query(bookingsRef, where('userDetails.uid', '==', state.currentUser.uid));
+            const snapshot = await getDocs(q);
+            const bookings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+            
+            // Preparar dados para exportação
+            const exportData = bookings.map(booking => ({
+                'Data': booking.bookingDetails.date,
+                'Hora Início': booking.bookingDetails.startTime,
+                'Hora Fim': booking.bookingDetails.endTime,
+                'Edifício': state.liveBuildingsData[booking.locationDetails.buildingId]?.name || 'N/A',
+                'Andar': state.liveBuildingsData[booking.locationDetails.buildingId]?.floors[booking.locationDetails.floorId]?.name || 'N/A',
+                'Mesa': booking.locationDetails.deskId,
+                'Status': booking.status || 'Ativa'
+            }));
+            
+            // Converter para CSV
+            const csvContent = [
+                Object.keys(exportData[0] || {}).join(','),
+                ...exportData.map(row => Object.values(row).join(','))
+            ].join('\n');
+            
+            // Criar e baixar arquivo
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `reservas_${state.currentUser.email}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Mostrar mensagem de sucesso
+            showSuccessModal('Dados exportados com sucesso!');
+            
+        } catch (error) {
+            console.error('Erro ao exportar dados:', error);
+            alert('Erro ao exportar dados. Tente novamente.');
         }
     });
 

@@ -211,6 +211,147 @@
                         Confirmar Reserva
                     </button>
                 </div>
+
+                <!-- Dashboard do Utilizador -->
+                <div id="user-dashboard" class="mt-8">
+                    <h2 class="text-2xl font-semibold text-gradient mb-6 animate-slide-in-left">Dashboard Pessoal</h2>
+                    
+                    <!-- Estatísticas Pessoais -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                        <!-- Reservas do Mês -->
+                        <div class="card-modern p-6 text-center animate-scale-in">
+                            <div class="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-1" id="monthly-bookings">0</h3>
+                            <p class="text-gray-400 text-sm">Reservas este mês</p>
+                        </div>
+
+                        <!-- Tempo Total Reservado -->
+                        <div class="card-modern p-6 text-center animate-scale-in">
+                            <div class="w-12 h-12 bg-gradient-success rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-1" id="total-hours">0h</h3>
+                            <p class="text-gray-400 text-sm">Tempo total reservado</p>
+                        </div>
+
+                        <!-- Mesa Favorita -->
+                        <div class="card-modern p-6 text-center animate-scale-in">
+                            <div class="w-12 h-12 bg-gradient-warning rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-bold text-white mb-1" id="favorite-desk">-</h3>
+                            <p class="text-gray-400 text-sm">Mesa favorita</p>
+                        </div>
+
+                        <!-- Frequência de Uso -->
+                        <div class="card-modern p-6 text-center animate-scale-in">
+                            <div class="w-12 h-12 bg-gradient-secondary rounded-full flex items-center justify-center mx-auto mb-3">
+                                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-2xl font-bold text-white mb-1" id="usage-frequency">0%</h3>
+                            <p class="text-gray-400 text-sm">Frequência de uso</p>
+                        </div>
+                    </div>
+
+                    <!-- Gráfico de Utilização -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Gráfico de Reservas por Semana -->
+                        <div class="card-modern p-6 animate-slide-in-left">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                </svg>
+                                Reservas por Semana
+                            </h3>
+                            <div id="weekly-chart" class="h-48 flex items-center justify-center">
+                                <div class="text-gray-400">Gráfico será carregado...</div>
+                            </div>
+                        </div>
+
+                        <!-- Distribuição por Andar -->
+                        <div class="card-modern p-6 animate-slide-in-right">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                                </svg>
+                                Distribuição por Andar
+                            </h3>
+                            <div id="floor-distribution" class="space-y-3">
+                                <div class="text-gray-400">Dados serão carregados...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Próximas Reservas e Favoritos -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                        <!-- Próximas Reservas -->
+                        <div class="card-modern p-6 animate-slide-in-left">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Próximas Reservas
+                            </h3>
+                            <div id="upcoming-bookings" class="space-y-3">
+                                <div class="text-gray-400">Carregando...</div>
+                            </div>
+                        </div>
+
+                        <!-- Mesas Favoritas -->
+                        <div class="card-modern p-6 animate-slide-in-right">
+                            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                                </svg>
+                                Mesas Favoritas
+                            </h3>
+                            <div id="favorite-desks" class="space-y-3">
+                                <div class="text-gray-400">Nenhuma mesa favorita ainda</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ações Rápidas -->
+                    <div class="card-modern p-6 animate-scale-in">
+                        <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                            </svg>
+                            Ações Rápidas
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button id="quick-book-btn" class="bg-gradient-primary text-white font-medium py-3 px-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Nova Reserva
+                            </button>
+                            <button id="view-history-btn" class="glass text-white font-medium py-3 px-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                Ver Histórico
+                            </button>
+                            <button id="export-data-btn" class="glass text-white font-medium py-3 px-4 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 btn-modern">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                                Exportar Dados
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div id="my-bookings-section" class="mt-8">
                     <h2 class="text-2xl font-semibold text-gradient mb-4 animate-slide-in-left">As Minhas Reservas</h2>
                     <div id="my-bookings-list" class="space-y-3"></div>
