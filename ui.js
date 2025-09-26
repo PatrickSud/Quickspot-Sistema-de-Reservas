@@ -32,7 +32,6 @@ export const ui = {
     fillUserBtn: document.getElementById('fill-user-btn'),
     admin: {
         manageBtn: document.getElementById('manage-layout-btn'),
-        modal: document.getElementById('admin-modal'),
         editor: document.getElementById('layout-json-editor'),
         saveBtn: document.getElementById('save-layout-btn'),
         addBuildingBtn: document.getElementById('add-building-btn'),
@@ -46,6 +45,13 @@ export const ui = {
         totalBookingsToday: document.getElementById('total-bookings-today'),
         allBookingsList: document.getElementById('all-bookings-list'),
         layoutManager: document.getElementById('layout-manager'),
+        modal: {
+            container: document.getElementById('generic-modal'),
+            title: document.getElementById('modal-title'),
+            content: document.getElementById('modal-content'),
+            saveBtn: document.getElementById('modal-save-btn'),
+            cancelBtn: document.getElementById('modal-cancel-btn'),
+        }
     }
 };
 
