@@ -2,7 +2,7 @@ import { auth, db } from './firebase-config.js';
 import { ui, show, hide, displayMessage, populateSelect } from './ui.js';
 import { ADMIN_EMAIL, initialBuildingsData, timeOptions, appId } from './constants.js';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, collection, onSnapshot, setDoc, getDoc, query, where, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, collection, onSnapshot, setDoc, getDoc, query, where, serverTimestamp, deleteDoc, addDoc, getDocs, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- STATE ---
 let state = {
@@ -16,10 +16,13 @@ let state = {
     liveBuildingsData: {},
     unsubscribeBookings: null,
     unsubscribeMyBookings: null,
+    unsubscribeAdminListeners: null,
+    isAdminView: false, // Novo: controla a visão do admin
 };
 
 // --- UTILITY ---
 const isTimeOverlap = (start1, end1, start2, end2) => start1 < end2 && start2 < end1;
+const getTodayDateString = () => new Date().toISOString().split('T')[0];
 
 // --- CORE APP LOGIC ---
 const resetState = () => {
@@ -94,6 +97,90 @@ const updateMyBookingsUI = (bookings) => {
     }
 };
 
+// --- ADMIN DASHBOARD ---
+const updateAdminDashboard = async () => {
+    // 1. Métricas
+    const today = getTodayDateString();
+    const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
+    const qToday = query(bookingsRef, where('date', '==', today));
+    const todaySnapshot = await getDocs(qToday);
+    const bookingsToday = todaySnapshot.docs.map(doc => doc.data());
+
+    // Taxa de Ocupação
+    const totalDesks = Object.values(state.liveBuildingsData).reduce((total, building) => {
+        return total + Object.values(building.floors).reduce((subTotal, floor) => subTotal + floor.desks.length, 0);
+    }, 0);
+    const occupancyRate = totalDesks > 0 ? (bookingsToday.length / totalDesks) * 100 : 0;
+    ui.admin.occupancyRate.textContent = `${occupancyRate.toFixed(1)}%`;
+    ui.admin.totalBookingsToday.textContent = bookingsToday.length;
+
+    // Lugar Mais Popular (baseado em todas as reservas)
+    const allBookingsSnapshot = await getDocs(bookingsRef);
+    const allBookings = allBookingsSnapshot.docs.map(doc => doc.data());
+    if (allBookings.length > 0) {
+        const buildingCounts = allBookings.reduce((acc, booking) => {
+            acc[booking.buildingId] = (acc[booking.buildingId] || 0) + 1;
+            return acc;
+        }, {});
+        const popularBuildingId = Object.keys(buildingCounts).sort((a, b) => buildingCounts[b] - buildingCounts[a])[0];
+        ui.admin.popularBuilding.textContent = state.liveBuildingsData[popularBuildingId]?.name || 'N/A';
+    } else {
+        ui.admin.popularBuilding.textContent = 'N/A';
+    }
+
+    // 2. Próximas Reservas
+    const qNext = query(bookingsRef, where('date', '>=', today), orderBy('date'), orderBy('startTime'), limit(10));
+    const nextSnapshot = await getDocs(qNext);
+    ui.admin.allBookingsList.innerHTML = '';
+    if (nextSnapshot.empty) {
+        ui.admin.allBookingsList.innerHTML = '<p class="text-center text-gray-500">Nenhuma reserva futura.</p>';
+    } else {
+        nextSnapshot.docs.forEach(doc => {
+            const booking = doc.data();
+            const item = document.createElement('div');
+            item.className = 'p-3 bg-gray-800 rounded-lg';
+            item.innerHTML = `<p class="font-medium text-sm text-white">${booking.user.email} - ${booking.deskId}</p><p class="text-xs text-gray-400">${booking.date} das ${booking.startTime} às ${booking.endTime}</p>`;
+            ui.admin.allBookingsList.appendChild(item);
+        });
+    }
+
+    // 3. Gestor de Estrutura
+    renderLayoutManager();
+};
+
+const renderLayoutManager = () => {
+    ui.admin.layoutManager.innerHTML = '';
+    for (const buildingId in state.liveBuildingsData) {
+        const building = state.liveBuildingsData[buildingId];
+        const buildingEl = document.createElement('div');
+        buildingEl.className = 'p-4 bg-gray-800 rounded-lg mb-4';
+        buildingEl.innerHTML = `<h4 class="text-lg font-bold text-white">${building.name}</h4>`;
+        // Adicionar andares e mesas
+        // (Interface de gestão mais complexa pode ser adicionada aqui)
+        ui.admin.layoutManager.appendChild(buildingEl);
+    }
+    // Nota: A gestão completa (add/remove) é complexa e excede um snippet simples.
+    // Por agora, substituímos o JSON por uma visualização. A edição ainda é recomendada via `saveLayout` com JSON.
+    ui.admin.layoutManager.innerHTML += `<p class="text-center text-sm text-gray-400 mt-4">A gestão visual completa será implementada numa futura versão. Por agora, pode continuar a editar a estrutura via JSON no modal.</p>`;
+};
+
+const toggleAdminView = (isAdmin) => {
+    state.isAdminView = isAdmin;
+    if (isAdmin) {
+        hide(ui.admin.userView);
+        show(ui.admin.adminView);
+        ui.admin.appTitle.textContent = 'Dashboard Admin';
+        ui.admin.toggleAdminViewBtn.textContent = 'Fazer Reserva';
+        updateAdminDashboard();
+    } else {
+        hide(ui.admin.adminView);
+        show(ui.admin.userView);
+        ui.admin.appTitle.textContent = 'Reservar Espaço';
+        ui.admin.toggleAdminViewBtn.textContent = 'Dashboard';
+        initializeAppUI();
+    }
+};
+
 // --- FIRESTORE OPERATIONS ---
 const fetchLayoutData = async () => {
     const layoutDocRef = doc(db, `/artifacts/${appId}/public/data/layout/main`);
@@ -123,7 +210,7 @@ const listenForBookings = () => {
 
 const listenForMyBookings = () => {
     if (state.unsubscribeMyBookings) state.unsubscribeMyBookings();
-    const q = query(collection(db, `/artifacts/${appId}/public/data/bookings`), where('userId', '==', state.currentUser.uid));
+    const q = query(collection(db, `/artifacts/${appId}/public/data/bookings`), where('userDetails.uid', '==', state.currentUser.uid));
     state.unsubscribeMyBookings = onSnapshot(q, (snapshot) => {
         const myBookings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
         updateMyBookingsUI(myBookings);
@@ -157,9 +244,10 @@ const saveLayout = async () => {
 const initializeAppUI = () => {
     resetState();
     populateSelect(ui.buildingSelect, Object.keys(state.liveBuildingsData).map(id => ({ id, name: state.liveBuildingsData[id].name })), 'Selecione um Edifício');
+    populateSelect(ui.floorSelect, [], 'Selecione um Andar');
     populateSelect(ui.startTimeSelect, timeOptions, 'Início');
     populateSelect(ui.endTimeSelect, timeOptions, 'Fim');
-    listenForMyBookings();
+    if (state.currentUser) listenForMyBookings();
     updateBookingDetails();
     goToStep(1);
 };
@@ -169,7 +257,13 @@ const showApp = async () => {
     hide(ui.authSection);
     hide(ui.loadingSpinner);
     show(ui.appSection);
-    if(state.currentUser.email === ADMIN_EMAIL) show(ui.admin.manageBtn); else hide(ui.admin.manageBtn);
+    if(state.currentUser.email === ADMIN_EMAIL) {
+        show(ui.admin.toggleAdminViewBtn);
+        // Ocultado para dar lugar ao botão de toggle
+        // show(ui.admin.manageBtn); 
+    } else {
+        hide(ui.admin.toggleAdminViewBtn);
+    }
     await fetchLayoutData();
     initializeAppUI();
 };
@@ -178,6 +272,7 @@ const showLogin = () => {
     hide(ui.configErrorBox);
     if(state.unsubscribeMyBookings) state.unsubscribeMyBookings();
     if(state.unsubscribeBookings) state.unsubscribeBookings();
+    if(state.unsubscribeAdminListeners) state.unsubscribeAdminListeners();
     state.currentUser = null;
     hide(ui.appSection);
     hide(ui.loadingSpinner);
@@ -249,16 +344,55 @@ const setupEventListeners = () => {
     ui.backToFloorBtn.addEventListener('click', () => goToStep(2));
     
     ui.bookButton.addEventListener('click', async () => {
-        if (!state.selectedDate || !state.selectedBuildingId || !state.selectedFloorId || !state.selectedStartTime || !state.selectedEndTime || !state.selectedDeskId) return displayMessage("Por favor, preencha todos os campos.", "error");
-        const bookingId = `${state.selectedDate}-${state.selectedBuildingId}-${state.selectedDeskId}-${state.selectedStartTime.replace(':', '')}-${state.selectedEndTime.replace(':', '')}`;
-        const data = { user: state.currentUser.email, userId: state.currentUser.uid, date: state.selectedDate, buildingId: state.selectedBuildingId, floorId: state.selectedFloorId, deskId: state.selectedDeskId, startTime: state.selectedStartTime, endTime: state.selectedEndTime, timestamp: serverTimestamp() };
-        try { await setDoc(doc(db, `/artifacts/${appId}/public/data/bookings/${bookingId}`), data); displayMessage("Reserva confirmada!"); initializeAppUI();} catch (e) { displayMessage("Erro ao fazer a reserva.", "error");}
+        if (!state.selectedDate || !state.selectedBuildingId || !state.selectedFloorId || !state.selectedStartTime || !state.selectedEndTime || !state.selectedDeskId) {
+            return displayMessage("Por favor, preencha todos os campos.", "error");
+        }
+
+        // Estrutura de dados mais organizada
+        const bookingData = {
+            // Detalhes do utilizador que fez a reserva
+            userDetails: {
+                email: state.currentUser.email,
+                uid: state.currentUser.uid
+            },
+            // Detalhes da reserva
+            bookingDetails: {
+                date: state.selectedDate,
+                startTime: state.selectedStartTime,
+                endTime: state.selectedEndTime,
+            },
+            // Detalhes da localização
+            locationDetails: {
+                buildingId: state.selectedBuildingId,
+                floorId: state.selectedFloorId,
+                deskId: state.selectedDeskId
+            },
+            // Timestamp para saber quando a reserva foi criada
+            createdAt: serverTimestamp()
+        };
+
+        try {
+            // Usamos addDoc para que o Firestore gere um ID único automaticamente
+            const bookingsCollection = collection(db, `/artifacts/${appId}/public/data/bookings`);
+            await addDoc(bookingsCollection, bookingData);
+
+            displayMessage("Reserva confirmada com sucesso!");
+            initializeAppUI(); // Reseta a UI para o estado inicial
+
+        } catch (e) {
+            console.error("Erro ao fazer a reserva: ", e);
+            displayMessage("Ocorreu um erro ao tentar fazer a reserva.", "error");
+        }
     });
 
     // Admin
-    ui.admin.manageBtn.addEventListener('click', () => { ui.admin.editor.value = JSON.stringify(state.liveBuildingsData, null, 2); show(ui.admin.modal); });
-    ui.admin.cancelBtn.addEventListener('click', () => hide(ui.admin.modal));
-    ui.admin.saveBtn.addEventListener('click', saveLayout);
+    ui.admin.toggleAdminViewBtn.addEventListener('click', () => {
+        toggleAdminView(!state.isAdminView);
+    });
+    // O modal antigo pode ser removido ou mantido como fallback
+    // ui.admin.manageBtn.addEventListener('click', () => { ui.admin.editor.value = JSON.stringify(state.liveBuildingsData, null, 2); show(ui.admin.modal); });
+    // ui.admin.cancelBtn.addEventListener('click', () => hide(ui.admin.modal));
+    // ui.admin.saveBtn.addEventListener('click', saveLayout);
 };
 
 // --- AUTH STATE CHANGE HANDLER ---
@@ -272,6 +406,6 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // --- INITIALIZE ---
-ui.dateInput.value = new Date().toISOString().split('T')[0];
+ui.dateInput.value = getTodayDateString();
 state.selectedDate = ui.dateInput.value;
 setupEventListeners();

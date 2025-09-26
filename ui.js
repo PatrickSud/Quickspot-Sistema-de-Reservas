@@ -36,6 +36,15 @@ export const ui = {
         editor: document.getElementById('layout-json-editor'),
         saveBtn: document.getElementById('save-layout-btn'),
         cancelBtn: document.getElementById('cancel-layout-btn'),
+        toggleAdminViewBtn: document.getElementById('toggle-admin-view-btn'),
+        adminView: document.getElementById('admin-view'),
+        userView: document.getElementById('user-view'),
+        appTitle: document.getElementById('app-title'),
+        occupancyRate: document.getElementById('occupancy-rate'),
+        popularBuilding: document.getElementById('popular-building'),
+        totalBookingsToday: document.getElementById('total-bookings-today'),
+        allBookingsList: document.getElementById('all-bookings-list'),
+        layoutManager: document.getElementById('layout-manager'),
     }
 };
 
