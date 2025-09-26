@@ -53,7 +53,13 @@ let state = {
         system: true,
         sound: true
     },
-    notificationHistory: []
+    notificationHistory: [],
+    // Sistema de Exportação
+    exportSettings: {
+        includeStats: true,
+        includeCharts: true,
+        includeUsers: true
+    }
 };
 
 // --- UTILITY ---
@@ -616,6 +622,301 @@ const showNotificationHistory = () => {
     showModalWithAnimation(ui.notificationHistoryModal, ui.notificationHistoryContent);
 };
 
+// ===== SISTEMA DE EXPORTAÇÃO =====
+
+// Função para mostrar modal de exportação
+const showExportModal = () => {
+    // Definir datas padrão (último mês)
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setMonth(startDate.getMonth() - 1);
+    
+    ui.exportStartDate.value = startDate.toISOString().split('T')[0];
+    ui.exportEndDate.value = endDate.toISOString().split('T')[0];
+    
+    // Carregar configurações
+    ui.includeStats.checked = state.exportSettings.includeStats;
+    ui.includeCharts.checked = state.exportSettings.includeCharts;
+    ui.includeUsers.checked = state.exportSettings.includeUsers;
+    
+    showModalWithAnimation(ui.exportModal, ui.exportModalContent);
+};
+
+// Função para exportar dados em Excel
+const exportToExcel = async (data, filename = 'dados_reservas') => {
+    try {
+        // Criar dados para Excel
+        const excelData = data.map(booking => ({
+            'Data': booking.bookingDetails?.date || booking.date,
+            'Hora Início': booking.bookingDetails?.startTime || booking.startTime,
+            'Hora Fim': booking.bookingDetails?.endTime || booking.endTime,
+            'Utilizador': booking.userDetails?.email || booking.userEmail || 'N/A',
+            'Edifício': state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.name || 'N/A',
+            'Andar': state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.floors[booking.locationDetails?.floorId || booking.floorId]?.name || 'N/A',
+            'Mesa': booking.locationDetails?.deskId || booking.deskId,
+            'Status': booking.status || 'Ativa',
+            'Criado em': booking.createdAt ? new Date(booking.createdAt.seconds * 1000).toLocaleString('pt-PT') : 'N/A'
+        }));
+        
+        // Converter para CSV
+        const csvContent = [
+            Object.keys(excelData[0] || {}).join(','),
+            ...excelData.map(row => Object.values(row).map(val => `"${val}"`).join(','))
+        ].join('\n');
+        
+        // Criar e baixar arquivo
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        createNotification('success', 'Exportação Excel', 'Dados exportados para Excel com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao exportar para Excel:', error);
+        createNotification('error', 'Erro na Exportação', 'Não foi possível exportar os dados para Excel.');
+    }
+};
+
+// Função para exportar backup em JSON
+const exportToJSON = async (data, filename = 'backup_reservas') => {
+    try {
+        const backupData = {
+            exportDate: new Date().toISOString(),
+            version: '1.0',
+            data: {
+                bookings: data,
+                buildings: state.liveBuildingsData,
+                settings: state.exportSettings
+            },
+            metadata: {
+                totalBookings: data.length,
+                buildingsCount: Object.keys(state.liveBuildingsData).length,
+                exportType: 'full_backup'
+            }
+        };
+        
+        const jsonContent = JSON.stringify(backupData, null, 2);
+        const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `${filename}_${new Date().toISOString().split('T')[0]}.json`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        createNotification('success', 'Backup JSON', 'Backup completo exportado com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao exportar backup JSON:', error);
+        createNotification('error', 'Erro no Backup', 'Não foi possível criar o backup JSON.');
+    }
+};
+
+// Função para gerar relatório PDF
+const generatePDFReport = async (data, options = {}) => {
+    try {
+        // Criar conteúdo HTML para o PDF
+        const htmlContent = createPDFContent(data, options);
+        
+        // Criar nova janela para impressão
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(htmlContent);
+        printWindow.document.close();
+        
+        // Aguardar carregamento e imprimir
+        printWindow.onload = () => {
+            printWindow.print();
+            printWindow.close();
+        };
+        
+        createNotification('success', 'Relatório PDF', 'Relatório PDF gerado com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro ao gerar PDF:', error);
+        createNotification('error', 'Erro no PDF', 'Não foi possível gerar o relatório PDF.');
+    }
+};
+
+// Função para criar conteúdo HTML do PDF
+const createPDFContent = (data, options) => {
+    const { title = 'Relatório de Reservas', includeStats = true, includeCharts = false, includeUsers = true } = options;
+    
+    // Calcular estatísticas
+    const stats = calculateReportStats(data);
+    
+    let html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>${title}</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 20px; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #333; padding-bottom: 20px; }
+            .section { margin-bottom: 25px; }
+            .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+            .stat-card { background: #f5f5f5; padding: 15px; border-radius: 8px; text-align: center; }
+            .stat-number { font-size: 24px; font-weight: bold; color: #2563eb; }
+            .stat-label { font-size: 12px; color: #666; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; font-weight: bold; }
+            .footer { margin-top: 30px; text-align: center; font-size: 12px; color: #666; }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <h1>${title}</h1>
+            <p>Gerado em: ${new Date().toLocaleString('pt-PT')}</p>
+        </div>
+    `;
+    
+    // Seção de estatísticas
+    if (includeStats) {
+        html += `
+        <div class="section">
+            <h2>Estatísticas Gerais</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">${stats.totalBookings}</div>
+                    <div class="stat-label">Total de Reservas</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.uniqueUsers}</div>
+                    <div class="stat-label">Utilizadores Únicos</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.avgBookingsPerDay}</div>
+                    <div class="stat-label">Média por Dia</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${stats.occupancyRate}%</div>
+                    <div class="stat-label">Taxa de Ocupação</div>
+                </div>
+            </div>
+        </div>
+        `;
+    }
+    
+    // Seção de dados detalhados
+    html += `
+    <div class="section">
+        <h2>Detalhes das Reservas</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Hora</th>
+                    <th>Utilizador</th>
+                    <th>Localização</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    data.forEach(booking => {
+        const buildingName = state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.name || 'N/A';
+        const floorName = state.liveBuildingsData[booking.locationDetails?.buildingId || booking.buildingId]?.floors[booking.locationDetails?.floorId || booking.floorId]?.name || 'N/A';
+        
+        html += `
+            <tr>
+                <td>${booking.bookingDetails?.date || booking.date}</td>
+                <td>${booking.bookingDetails?.startTime || booking.startTime} - ${booking.bookingDetails?.endTime || booking.endTime}</td>
+                <td>${booking.userDetails?.email || booking.userEmail || 'N/A'}</td>
+                <td>${buildingName} - ${floorName} - ${booking.locationDetails?.deskId || booking.deskId}</td>
+                <td>${booking.status || 'Ativa'}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="footer">
+        <p>Relatório gerado automaticamente pelo Sistema de Reservas Quickspot</p>
+    </div>
+    </body>
+    </html>
+    `;
+    
+    return html;
+};
+
+// Função para calcular estatísticas do relatório
+const calculateReportStats = (data) => {
+    const uniqueUsers = new Set(data.map(booking => booking.userDetails?.uid || booking.userId)).size;
+    const totalBookings = data.length;
+    
+    // Calcular média de reservas por dia
+    const dateCounts = {};
+    data.forEach(booking => {
+        const date = booking.bookingDetails?.date || booking.date;
+        dateCounts[date] = (dateCounts[date] || 0) + 1;
+    });
+    const avgBookingsPerDay = Object.keys(dateCounts).length > 0 
+        ? Math.round(totalBookings / Object.keys(dateCounts).length) 
+        : 0;
+    
+    // Calcular taxa de ocupação (simplificada)
+    const totalDesks = Object.values(state.liveBuildingsData).reduce((total, building) => {
+        return total + Object.values(building.floors).reduce((floorTotal, floor) => {
+            return floorTotal + floor.desks.length;
+        }, 0);
+    }, 0);
+    
+    const occupancyRate = totalDesks > 0 ? Math.round((totalBookings / totalDesks) * 100) : 0;
+    
+    return {
+        totalBookings,
+        uniqueUsers,
+        avgBookingsPerDay,
+        occupancyRate
+    };
+};
+
+// Função para buscar dados com filtros
+const fetchFilteredData = async (startDate, endDate) => {
+    try {
+        const bookingsRef = collection(db, `/artifacts/${appId}/public/data/bookings`);
+        const snapshot = await getDocs(bookingsRef);
+        let bookings = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+        
+        // Aplicar filtros de data
+        if (startDate && endDate) {
+            bookings = bookings.filter(booking => {
+                const bookingDate = booking.bookingDetails?.date || booking.date;
+                return bookingDate >= startDate && bookingDate <= endDate;
+            });
+        }
+        
+        return bookings;
+    } catch (error) {
+        console.error('Erro ao buscar dados:', error);
+        return [];
+    }
+};
+
+// Função para mostrar modal de relatório personalizado
+const showCustomReportModal = () => {
+    // Definir valores padrão
+    ui.customReportTitle.value = `Relatório Personalizado - ${new Date().toLocaleDateString('pt-PT')}`;
+    ui.customReportDescription.value = 'Relatório gerado automaticamente com dados personalizados.';
+    
+    // Mostrar modal
+    showModalWithAnimation(ui.customReportModal, ui.customReportContent);
+};
+
 // ===== DASHBOARD DO ADMINISTRADOR =====
 
 // Função para calcular estatísticas administrativas
@@ -914,8 +1215,8 @@ const goToStep = (step) => {
         }, 300);
     } else {
         steps.forEach(s => hide(document.getElementById(s)));
-        hide(ui.bookingDetailsSummary);
-        show(document.getElementById(`step-${step}`));
+    hide(ui.bookingDetailsSummary);
+    show(document.getElementById(`step-${step}`));
     }
 };
 
@@ -1017,12 +1318,12 @@ const updateDesksUI = (deskBookings) => {
                 ${desk.tags && desk.tags.length > 0 ? `<div class="text-xs mt-1 opacity-80">${desk.tags.join(', ')}</div>` : ''}
             `;
             
-            if (isAvailable) {
+        if (isAvailable) {
                 deskElement.addEventListener('click', () => {
                     state.selectedDeskId = desk.id;
-                    updateBookingDetails();
-                    hide(document.getElementById('step-3'));
-                    show(ui.bookingDetailsSummary);
+                updateBookingDetails();
+                hide(document.getElementById('step-3'));
+                show(ui.bookingDetailsSummary);
                     
                     // Atualizar visualização
                     document.querySelectorAll('.desk-item').forEach(d => {
@@ -1359,11 +1660,11 @@ const setupEventListeners = () => {
                 const dates = generateRecurringDates(startDate, endDate, frequency);
                 
                 for (const date of dates) {
-                    const bookingData = {
-                        userDetails: {
-                            email: state.currentUser.email,
-                            uid: state.currentUser.uid
-                        },
+        const bookingData = {
+            userDetails: {
+                email: state.currentUser.email,
+                uid: state.currentUser.uid
+            },
                         bookingDetails: {
                             date: date.toISOString().split('T')[0],
                             startTime: state.selectedStartTime,
@@ -1389,21 +1690,21 @@ const setupEventListeners = () => {
                         email: state.currentUser.email,
                         uid: state.currentUser.uid
                     },
-                    bookingDetails: {
-                        date: state.selectedDate,
-                        startTime: state.selectedStartTime,
-                        endTime: state.selectedEndTime,
-                    },
-                    locationDetails: {
-                        buildingId: state.selectedBuildingId,
-                        floorId: state.selectedFloorId,
-                        deskId: state.selectedDeskId
-                    },
+            bookingDetails: {
+                date: state.selectedDate,
+                startTime: state.selectedStartTime,
+                endTime: state.selectedEndTime,
+            },
+            locationDetails: {
+                buildingId: state.selectedBuildingId,
+                floorId: state.selectedFloorId,
+                deskId: state.selectedDeskId
+            },
                     createdAt: serverTimestamp(),
                     isRecurring: false
-                };
-                
-                await addDoc(bookingsCollection, bookingData);
+        };
+
+            await addDoc(bookingsCollection, bookingData);
                 showSuccessModal("Reserva confirmada com sucesso!");
                 
                 // Notificação de reserva confirmada
@@ -1558,6 +1859,127 @@ const setupEventListeners = () => {
         hideModalWithAnimation(ui.notificationHistoryModal, ui.notificationHistoryContent);
     });
 
+    // ===== SISTEMA DE EXPORTAÇÃO - EVENT LISTENERS =====
+    
+    // Botão de exportação avançada
+    ui.advancedExportBtn.addEventListener('click', () => {
+        showExportModal();
+    });
+    
+    // Fechar modal de exportação
+    ui.closeExportModal.addEventListener('click', () => {
+        hideModalWithAnimation(ui.exportModal, ui.exportModalContent);
+    });
+    
+    // Exportar para Excel
+    ui.exportExcelBtn.addEventListener('click', async () => {
+        try {
+            const startDate = ui.exportStartDate.value;
+            const endDate = ui.exportEndDate.value;
+            const data = await fetchFilteredData(startDate, endDate);
+            
+            if (data.length === 0) {
+                createNotification('warning', 'Sem Dados', 'Não há dados para exportar no período selecionado.');
+                return;
+            }
+            
+            await exportToExcel(data, 'reservas_excel');
+            hideModalWithAnimation(ui.exportModal, ui.exportModalContent);
+        } catch (error) {
+            console.error('Erro ao exportar para Excel:', error);
+            createNotification('error', 'Erro na Exportação', 'Não foi possível exportar os dados.');
+        }
+    });
+    
+    // Exportar backup JSON
+    ui.exportJsonBtn.addEventListener('click', async () => {
+        try {
+            const startDate = ui.exportStartDate.value;
+            const endDate = ui.exportEndDate.value;
+            const data = await fetchFilteredData(startDate, endDate);
+            
+            if (data.length === 0) {
+                createNotification('warning', 'Sem Dados', 'Não há dados para exportar no período selecionado.');
+                return;
+            }
+            
+            await exportToJSON(data, 'backup_reservas');
+            hideModalWithAnimation(ui.exportModal, ui.exportModalContent);
+        } catch (error) {
+            console.error('Erro ao exportar backup JSON:', error);
+            createNotification('error', 'Erro no Backup', 'Não foi possível criar o backup.');
+        }
+    });
+    
+    // Gerar relatório PDF
+    ui.exportPdfBtn.addEventListener('click', async () => {
+        try {
+            const startDate = ui.exportStartDate.value;
+            const endDate = ui.exportEndDate.value;
+            const data = await fetchFilteredData(startDate, endDate);
+            
+            if (data.length === 0) {
+                createNotification('warning', 'Sem Dados', 'Não há dados para exportar no período selecionado.');
+                return;
+            }
+            
+            const options = {
+                title: `Relatório de Reservas - ${startDate} a ${endDate}`,
+                includeStats: ui.includeStats.checked,
+                includeCharts: ui.includeCharts.checked,
+                includeUsers: ui.includeUsers.checked
+            };
+            
+            await generatePDFReport(data, options);
+            hideModalWithAnimation(ui.exportModal, ui.exportModalContent);
+        } catch (error) {
+            console.error('Erro ao gerar PDF:', error);
+            createNotification('error', 'Erro no PDF', 'Não foi possível gerar o relatório PDF.');
+        }
+    });
+    
+    // Relatório personalizado
+    ui.exportCustomBtn.addEventListener('click', () => {
+        hideModalWithAnimation(ui.exportModal, ui.exportModalContent);
+        showCustomReportModal();
+    });
+    
+    // Gerar relatório personalizado
+    ui.generateCustomReport.addEventListener('click', async () => {
+        try {
+            const title = ui.customReportTitle.value || 'Relatório Personalizado';
+            const description = ui.customReportDescription.value || '';
+            const startDate = ui.exportStartDate.value;
+            const endDate = ui.exportEndDate.value;
+            
+            const data = await fetchFilteredData(startDate, endDate);
+            
+            if (data.length === 0) {
+                createNotification('warning', 'Sem Dados', 'Não há dados para exportar no período selecionado.');
+                return;
+            }
+            
+            const options = {
+                title: title,
+                description: description,
+                includeStats: ui.sectionSummary.checked,
+                includeCharts: false,
+                includeUsers: ui.sectionUsers.checked
+            };
+            
+            await generatePDFReport(data, options);
+            hideModalWithAnimation(ui.customReportModal, ui.customReportContent);
+        } catch (error) {
+            console.error('Erro ao gerar relatório personalizado:', error);
+            createNotification('error', 'Erro no Relatório', 'Não foi possível gerar o relatório personalizado.');
+        }
+    });
+    
+    // Cancelar relatório personalizado
+    ui.cancelCustomReport.addEventListener('click', () => {
+        hideModalWithAnimation(ui.customReportModal, ui.customReportContent);
+    });
+
     // ===== DASHBOARD DO ADMINISTRADOR - EVENT LISTENERS =====
     
     // Botão de gerir espaços
@@ -1663,9 +2085,9 @@ const setupEventListeners = () => {
                 showModal(`Novo Andar para "${state.liveBuildingsData[parentId].name}"`, content, () => {
                     const name = document.getElementById('modal-input-name').value;
                     if (name) {
-                        const floorId = `floor-${Date.now()}`;
+                const floorId = `floor-${Date.now()}`;
                         state.liveBuildingsData[parentId].floors[floorId] = { name, desks: [] };
-                        renderLayoutManager();
+                renderLayoutManager();
                         hideModal();
                     }
                 });
@@ -1693,7 +2115,7 @@ const setupEventListeners = () => {
                             const deskObject = { id: deskId, tags: tags };
                             state.liveBuildingsData[grandparentId].floors[parentId].desks.push(deskObject);
                         }
-                        renderLayoutManager();
+                renderLayoutManager();
                         hideModal();
                     }
                 });
@@ -1713,7 +2135,7 @@ const setupEventListeners = () => {
                 const index = desks.indexOf(id);
                 if (index > -1) desks.splice(index, 1);
             }
-            renderLayoutManager();
+                renderLayoutManager();
         }
 
         // Ações de Renomear (Editar)
@@ -1725,7 +2147,7 @@ const setupEventListeners = () => {
                 if (newName && newName !== currentName) {
                     if (type === 'building') state.liveBuildingsData[id].name = newName;
                     if (type === 'floor') state.liveBuildingsData[parentId].floors[id].name = newName;
-                    renderLayoutManager();
+            renderLayoutManager();
                 }
                 hideModal();
             });
