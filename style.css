@@ -157,15 +157,7 @@ html, body {
     scroll-behavior: smooth;
 }
 
-body {
-    font-family: var(--font-primary);
-    background: var(--bg-dark);
-    color: var(--gray-100);
-    line-height: var(--leading-normal);
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-    overflow-x: hidden;
-}
+/* Regra body movida para o final do arquivo com gradiente animado */
 
 /* ===== GLASSMORPHISM EFFECTS ===== */
 .glass {
@@ -662,4 +654,33 @@ select::-webkit-select {
 #layout-json-editor {
     min-height: 400px;
     font-family: monospace;
+}
+
+/* ===== GRADIENTE ANIMADO ===== */
+@keyframes animatedGradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+/* Atualizar o body para usar o gradiente animado */
+body {
+    font-family: var(--font-primary);
+    
+    /* Gradiente animado moderno */
+    background: linear-gradient(135deg, #0c0c0c, #1a1a2e, #16213e, #075985);
+    background-size: 300% 300%;
+    animation: animatedGradient 15s ease infinite;
+
+    color: var(--gray-100);
+    line-height: var(--leading-normal);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: hidden;
 }
